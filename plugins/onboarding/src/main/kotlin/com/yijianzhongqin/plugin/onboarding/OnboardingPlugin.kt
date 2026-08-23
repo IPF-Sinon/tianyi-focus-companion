@@ -26,6 +26,7 @@ import androidx.core.content.ContextCompat
 import com.yijianzhongqin.sdk.Plugin
 import com.yijianzhongqin.sdk.PluginContext
 import com.yijianzhongqin.sdk.event.AppEvent
+import com.yijianzhongqin.sdk.event.ActionType
 import com.yijianzhongqin.sdk.slot.UISlot
 import com.yijianzhongqin.sdk.util.PluginId
 import com.yijianzhongqin.sdk.util.SemVer
@@ -62,7 +63,7 @@ class OnboardingPlugin : Plugin {
             PermissionScreen(
                 hostContext = ctx.getHostContext(),
                 onAllGranted = {
-                    ctx.eventBus.emit(AppEvent.CompanionAction(AppEvent.ActionType.SMILE))
+                    ctx.eventBus.emit(AppEvent.CompanionAction(ActionType.SMILE))
                 },
             )
         }
