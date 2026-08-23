@@ -16,16 +16,29 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 设置 JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 设置 Android SDK
+      - name: 初始化 Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 35
-          build-tools: '35.0.0'
+          cmdline-tools-version: '11076708'
+          accept-android-sdk-licenses: 'true'
+
+      - name: 安装 Android SDK 组件
+        run: |
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+          yes | sdkmanager --licenses
+
+      - name: 设置 Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: 生成 Gradle Wrapper
+        run: gradle wrapper --gradle-version 8.7
 
       - name: 缓存 Gradle
         uses: actions/cache@v4
@@ -35,11 +48,7 @@ jobs:
             ~/.gradle/wrapper
             .gradle
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle.properties', '**/libs.versions.toml') }}
-
-      - name: 生成 Gradle Wrapper
-        uses: gradle/actions/wrapper-validation@v3
-        with:
-          gradle-version: '8.7'
+          restore-keys: ${{ runner.os }}-gradle-
 
       - name: 构建 Debug APK
         run: ./gradlew :host:assembleDebug --stacktrace
