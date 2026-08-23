@@ -15,9 +15,11 @@ import kotlinx.coroutines.launch
  */
 class EventBus {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    @PublishedApi
+    internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private val _events = MutableSharedFlow<AppEvent>(
+    @PublishedApi
+    internal val _events = MutableSharedFlow<AppEvent>(
         replay = 0,
         extraBufferCapacity = 64,
     )
@@ -37,7 +39,6 @@ class EventBus {
 
     /**
      * 订阅特定类型的事件。
-     * @param filter 事件类型过滤器
      * @param handler 事件处理器
      */
     inline fun <reified T : AppEvent> subscribe(
