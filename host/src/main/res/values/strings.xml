@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">依见钟勤</string>
-</resources>
     <string name="accessibility_description">天依通过此服务检测你打开的 App，帮助保持专注。你的个人数据不会离开设备。</string>
+</resources>
