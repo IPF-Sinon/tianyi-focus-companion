@@ -35,7 +35,7 @@ sealed interface AppEvent {
         val reason: PauseReason,
     ) : AppEvent
 
-    data class FocusResumed : AppEvent
+    object FocusResumed : AppEvent
 
     data class FocusAborted(
         val reason: AbortReason,
