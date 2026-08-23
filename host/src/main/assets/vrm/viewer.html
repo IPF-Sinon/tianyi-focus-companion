@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>天依 3D 渲染</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+            touch-action: none;
+        }
+        #canvas { width: 100%; height: 100%; display: block; }
+        #loading {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: rgba(255,255,255,0.7);
+            font-family: system-ui, sans-serif;
+            font-size: 14px;
+            text-align: center;
+        }
+    </style>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div id="loading">天依正在加载…</div>
+    <canvas id="canvas"></canvas>
+    <script type="module">
+        import * as THREE from 'three';
+        import { VRMLoaderPlugin } from 'three/addons/loaders/VRMLoaderPlugin.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        // 场景
+        const canvas = document.getElementById('canvas');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1a1a2e);
+
+        // 相机
+        const camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 20);
+        camera.position.set(0, 1.0, 3.5);
+        camera.lookAt(0, 0.8, 0);
+
+        // 渲染器
+        const renderer = new THREE.WebGLRenderer({
+            canvas: canvas,
+            antialias: true,
+            alpha: true,
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        // 灯光
+        const light1 = new THREE.DirectionalLight(0xffffff, 1.5);
+        light1.position.set(1, 2, 2);
+        scene.add(light1);
+        const light2 = new THREE.AmbientLight(0x404060, 0.8);
+        scene.add(light2);
+
+        let currentVrm = null;
+        let currentEmotion = 'IDLE';
+        let currentMouthOpen = 0;
+        let animationMixer = null;
+        let clock = new THREE.Clock();
+
+        // 加载 VRM 模型（实际需替换为 tianyi.vrm）
+        const loader = new GLTFLoader();
+        loader.crossOrigin = 'anonymous';
+        loader.register(parser => new VRMLoaderPlugin(parser));
+        loader.load(
+            '../tianyi.vrm',
+            (gltf) => {
+                currentVrm = gltf.userData.vrm;
+                scene.add(currentVrm.scene);
+                currentVrm.scene.position.set(0, 0, 0);
+                currentVrm.scene.rotation.y = Math.PI;
+
+                currentVrm.update(0);
+
+                // 如果有动画，播放 idle
+                try {
+                    const animations = gltf.animations;
+                    if (animations && animations.length > 0) {
+                        animationMixer = new THREE.AnimationMixer(currentVrm.scene);
+                        const action = animationMixer.clipAction(animations[0]);
+                        action.play();
+                    }
+                } catch (e) {}
+
+                document.getElementById('loading').style.display = 'none';
+
+                // 通知 Android
+                if (window.TianyiBridge) {
+                    TianyiBridge.onModelLoaded();
+                }
+            },
+            (progress) => {
+                if (progress.total > 0) {
+                    const pct = Math.round((progress.loaded / progress.total) * 100);
+                    document.getElementById('loading').textContent = `天依正在加载… ${pct}%`;
+                }
+            },
+            (err) => {
+                document.getElementById('loading').textContent = '模型加载失败，请安装天依 VRM 模型';
+                console.error(err);
+            }
+        );
+
+        // 情绪映射到 VRM 表情
+        const emotionToBlendShape = {
+            IDLE: {},
+            ENCOURAGING: { happy: 0.6 },
+            WORRIED: { sad: 0.4 },
+            STERN: { angry: 0.6 },
+            CELEBRATING: { happy: 1.0, surprised: 0.3 },
+            DISAPPOINTED: { sad: 0.8, angry: 0.2 },
+            PLAYFUL: { happy: 0.7, surprised: 0.4 },
+        };
+
+        // 暴露给 Android 的方法
+        window.setEmotion = function (emotion) {
+            currentEmotion = emotion;
+            if (currentVrm) {
+                applyEmotion();
+            }
+        };
+
+        window.setMouthOpen = function (value) {
+            currentMouthOpen = parseFloat(value) || 0;
+            if (currentVrm) {
+                applyMouth();
+            }
+        };
+
+        function applyEmotion() {
+            const blendshapes = currentVrm.expressionManager?.expressions || [];
+            // 先全部重置
+            for (const shape of blendshapes) {
+                shape.weight = 0;
+            }
+            const target = emotionToBlendShape[currentEmotion] || {};
+            for (const [name, weight] of Object.entries(target)) {
+                const shape = currentVrm.expressionManager?.getExpression(name);
+                if (shape) {
+                    shape.weight = weight;
+                }
+            }
+        }
+
+        function applyMouth() {
+            // 嘴巴开口变化
+            const aa = currentVrm.expressionManager?.getExpression('aa');
+            if (aa) {
+                aa.weight = currentMouthOpen;
+            }
+        }
+
+        // 点击交互
+        canvas.addEventListener('click', () => {
+            if (window.TianyiBridge) {
+                TianyiBridge.onTap();
+            }
+        });
+
+        // 窗口自适应
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // 渲染循环
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (currentVrm) {
+                currentVrm.update(delta);
+            }
+            if (animationMixer) {
+                animationMixer.update(delta);
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
