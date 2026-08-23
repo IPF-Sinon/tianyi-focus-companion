@@ -23,6 +23,7 @@ import androidx.core.app.NotificationCompat
 import com.yijianzhongqin.sdk.Plugin
 import com.yijianzhongqin.sdk.PluginContext
 import com.yijianzhongqin.sdk.event.AppEvent
+import com.yijianzhongqin.sdk.event.AbortReason
 import com.yijianzhongqin.sdk.slot.UISlot
 import com.yijianzhongqin.sdk.util.PluginId
 import com.yijianzhongqin.sdk.util.SemVer
@@ -134,7 +135,7 @@ class FocusStateMachine(
     suspend fun stop() {
         timerJob?.cancel()
         if (_state.value == FocusState.ACTIVE) {
-            eventBus.emit(AppEvent.FocusAborted(AppEvent.AbortReason.MANUAL))
+            eventBus.emit(AppEvent.FocusAborted(AbortReason.MANUAL))
         }
         _state.value = FocusState.IDLE
         ForegroundService.stop(context)
