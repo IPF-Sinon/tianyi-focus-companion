@@ -113,7 +113,7 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
-    implementation(libs.miuix.icons)
-    implementation(libs.miuix.preference)
     implementation(libs.miuix.ui)
+    implementation(libs.miuix.preference)
+    implementation(libs.miuix.icons)
 }
