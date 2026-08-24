@@ -109,7 +109,7 @@ fun PermissionScreen(
 
         permissionsStatus["使用情况访问"] = if (Build.VERSION.SDK_INT >= 21) {
             try {
-                val usm = hostContext.getSystemService(Context.USAGE_STATS_SERVICE)
+                val usm = hostContext.getSystemService(android.app.usage.UsageStatsManager::class.java)
                 usm != null && usm.queryUsageStats(0, 0, 0).isNotEmpty()
             } catch (_: Exception) { false }
         } else true
