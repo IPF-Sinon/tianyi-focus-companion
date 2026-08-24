@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.yijianzhongqin.sdk"
+    namespace = "top.funcun.companion.sdk"
     compileSdk = 35
 
     defaultConfig {

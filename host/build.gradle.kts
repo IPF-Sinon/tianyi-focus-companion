@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.yijianzhongqin"
+    namespace = "top.funcun.companion"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.yijianzhongqin.app"
+        applicationId = "top.funcun.companion.app"
         minSdk = 29
         targetSdk = 35
         versionCode = 1
@@ -113,4 +113,7 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+    implementation(libs.miuix.icons)
+    implementation(libs.miuix.preference)
+    implementation(libs.miuix.ui)
 }

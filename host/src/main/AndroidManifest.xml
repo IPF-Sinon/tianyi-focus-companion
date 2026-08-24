@@ -32,13 +32,13 @@
 
         <!-- 前台服务（番茄钟保活） -->
         <service
-            android:name="com.yijianzhongqin.plugin.focus.ForegroundService"
+            android:name="top.funcun.companion.plugin.focus.ForegroundService"
             android:exported="false"
             android:foregroundServiceType="specialUse" />
 
         <!-- 无障碍服务（强制拦截） -->
         <service
-            android:name="com.yijianzhongqin.plugin.enforce.FocusAccessibilityService"
+            android:name="top.funcun.companion.plugin.enforce.FocusAccessibilityService"
             android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
@@ -51,7 +51,7 @@
 
         <!-- 设备管理员（深度锁机） -->
         <receiver
-            android:name="com.yijianzhongqin.plugin.enforce.lock.LockAdminReceiver"
+            android:name="top.funcun.companion.plugin.enforce.lock.LockAdminReceiver"
             android:exported="true"
             android:permission="android.permission.BIND_DEVICE_ADMIN">
             <meta-data

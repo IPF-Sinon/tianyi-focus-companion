@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.yijianzhongqin.plugin.enforce.block"
+    namespace = "top.funcun.companion.plugin.enforce.block"
     compileSdk = 35
 
     defaultConfig {
@@ -48,4 +48,7 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.work.runtime)
     implementation(libs.coil.compose)
+    implementation(libs.miuix.icons)
+    implementation(libs.miuix.preference)
+    implementation(libs.miuix.ui)
 }
