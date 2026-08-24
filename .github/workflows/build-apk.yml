@@ -29,16 +29,19 @@ jobs:
 
       - name: 安装 Android SDK 组件
         run: |
-          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+          sdkmanager "platforms;android-37" "build-tools;35.0.0" "platform-tools"
           yes | sdkmanager --licenses
 
-      - name: 设置 Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.11.1'
-
       - name: 生成 Gradle Wrapper
-        run: gradle wrapper --gradle-version 8.11.1
+        run: |
+          apt-get update -qq && apt-get install -y -qq gradle 2>/dev/null || true
+          # 如果系统没装 gradle，去下载
+          if ! command -v gradle &> /dev/null; then
+            curl -sL -o /tmp/gradle-bin.zip "https://services.gradle.org/distributions/gradle-8.11.1-bin.zip"
+            unzip -q /tmp/gradle-bin.zip -d /opt
+            export PATH=/opt/gradle-8.11.1/bin:$PATH
+          fi
+          gradle wrapper --gradle-version 8.11.1
 
       - name: 缓存 Gradle
         uses: actions/cache@v4
