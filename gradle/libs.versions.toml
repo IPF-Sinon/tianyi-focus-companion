@@ -1,7 +1,7 @@
 [versions]
 kotlin = "2.0.21"
 agp = "8.7.3"
-compose-bom = "2024.11.00"
+compose-bom = "2024.06.00"
 hilt = "2.53.1"
 hilt-navigation = "1.2.0"
 room = "2.6.1"
@@ -13,7 +13,7 @@ coil = "3.0.4"
 work = "2.10.0"
 camerax = "1.4.1"
 coroutines = "1.9.0"
-miuix = "0.9.4-rc01"
+miuix = "0.9.3"
 ksp = "2.0.21-1.0.28"
 
 [libraries]
@@ -29,7 +29,7 @@ compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 compose-material-icons = { group = "androidx.compose.material", name = "material-icons-extended" }
-compose-navigation = { group = "androidx.navigation", name = "navigation-compose", version = "2.8.5" }
+compose-navigation = { group = "androidx.navigation", name = "navigation-compose", version = "2.7.7" }
 compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
 
 # Activity
