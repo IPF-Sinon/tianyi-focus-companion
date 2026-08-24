@@ -109,9 +109,9 @@ class VoiceEngine(private val context: android.content.Context) {
                 )
                 setDataSource(url)
                 setOnPreparedListener { start() }
-                setOnCompletionListener { isPlaying = false }
+                setOnCompletionListener { this@VoiceEngine.isPlaying = false }
                 prepareAsync()
-                isPlaying = true
+                this@VoiceEngine.isPlaying = true
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to play audio", e)
