@@ -171,6 +171,7 @@ fun PermissionScreen(
                                 // 降级到应用详情页
                                 val fallback = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                     data = android.net.Uri.fromParts("package", hostContext.packageName, null)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 }
                                 hostContext.startActivity(fallback)
                             }
@@ -208,6 +209,7 @@ fun PermissionScreen(
             onClick = {
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                     data = android.net.Uri.fromParts("package", hostContext.packageName, null)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 hostContext.startActivity(intent)
             },
@@ -240,7 +242,7 @@ fun PermissionScreen(
  * 根据权限名称返回对应的系统设置 Intent。
  */
 private fun getPermissionIntent(context: Context, permissionName: String): Intent? {
-    return when (permissionName) {
+    val intent: Intent? = when (permissionName) {
         "无障碍服务" -> Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
         "使用情况访问" -> Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
         "摄像头" -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -259,4 +261,7 @@ private fun getPermissionIntent(context: Context, permissionName: String): Inten
         }
         else -> null
     }
+    // Application context 启动 Activity 必须加 NEW_TASK flag
+    intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    return intent
 }
