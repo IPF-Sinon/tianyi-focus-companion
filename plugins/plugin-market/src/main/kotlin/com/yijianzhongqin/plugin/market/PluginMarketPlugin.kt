@@ -111,7 +111,7 @@ fun PluginMarketSection() {
                     FilledTonalButton(
                         onClick = {
                             // 下载并安装插件
-                            Log.i(TAG, "Installing plugin: ${plugin.id}")
+                            Log.i("PluginMarket", "Installing plugin: ${plugin.id}")
                         },
                         shape = RoundedCornerShape(24.dp),
                     ) {
