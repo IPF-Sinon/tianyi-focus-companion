@@ -13,7 +13,6 @@ import com.yijianzhongqin.sdk.slot.UISlot
  */
 @Composable
 fun FocusScreen(
-    onFinish: () -> Unit,
     getSlotContents: (UISlot) -> List<@Composable () -> Unit>,
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
