@@ -160,22 +160,44 @@ fun PermissionScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             permissionsStatus.forEach { (name, granted) ->
-                Row(
+                // 每个权限项是可点击的按钮，点击跳转到对应设置页
+                val intent = getPermissionIntent(hostContext, name)
+                Button(
+                    onClick = {
+                        if (intent != null) {
+                            try {
+                                hostContext.startActivity(intent)
+                            } catch (_: Exception) {
+                                // 降级到应用详情页
+                                val fallback = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = android.net.Uri.fromParts("package", hostContext.packageName, null)
+                                }
+                                hostContext.startActivity(fallback)
+                            }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.15f))
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White.copy(alpha = 0.15f),
+                        contentColor = Color.White,
+                    ),
                 ) {
-                    Text(text = name, color = Color.White, fontSize = 16.sp)
-                    Text(
-                        text = if (granted) "已授予" else "未授予",
-                        color = if (granted) SuccessColor else WarningColor,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(text = name, fontSize = 16.sp)
+                        Text(
+                            text = if (granted) "已授予" else "未授予 →",
+                            color = if (granted) SuccessColor else WarningColor,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
                 }
             }
         }
@@ -185,7 +207,7 @@ fun PermissionScreen(
         Button(
             onClick = {
                 val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = Uri.fromParts("package", hostContext.packageName, null)
+                    data = android.net.Uri.fromParts("package", hostContext.packageName, null)
                 }
                 hostContext.startActivity(intent)
             },
@@ -211,5 +233,30 @@ fun PermissionScreen(
                 fontSize = 14.sp,
             )
         }
+    }
+}
+
+/**
+ * 根据权限名称返回对应的系统设置 Intent。
+ */
+private fun getPermissionIntent(context: Context, permissionName: String): Intent? {
+    return when (permissionName) {
+        "无障碍服务" -> Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        "使用情况访问" -> Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+        "摄像头" -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = android.net.Uri.fromParts("package", context.packageName, null)
+        }
+        "通知" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            }
+        } else null
+        "忽略电池优化" -> Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = android.net.Uri.fromParts("package", context.packageName, null)
+        }
+        "悬浮窗" -> Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+            data = android.net.Uri.fromParts("package", context.packageName, null)
+        }
+        else -> null
     }
 }
