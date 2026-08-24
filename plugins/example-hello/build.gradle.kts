@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "top.funcun.companion.plugin.example.hello"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 29

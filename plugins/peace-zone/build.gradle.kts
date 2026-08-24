@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "top.funcun.companion.plugin.peace.zone"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 29
