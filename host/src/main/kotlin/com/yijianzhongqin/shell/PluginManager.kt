@@ -152,7 +152,7 @@ class PluginManager(private val context: Context) {
         }
     }
 
-    private val services = mutableMapOf<String, Any>()
+    private val services = mutableMapOf<String, Any?>()
 
     /** 获取指定插槽的所有 UI 组件 */
     fun getSlotContents(slot: com.yijianzhongqin.sdk.slot.UISlot): List<@Composable () -> Unit> {
