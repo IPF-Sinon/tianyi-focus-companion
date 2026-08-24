@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.1.0"
+kotlin = "2.0.21"
 agp = "9.1.0"
 compose-bom = "2024.12.01"
 hilt = "2.53.1"
@@ -14,7 +14,7 @@ work = "2.10.0"
 camerax = "1.4.1"
 coroutines = "1.9.0"
 miuix = "0.9.4-rc01"
-ksp = "2.1.0-1.0.29"
+ksp = "2.0.21-1.0.28"
 
 [libraries]
 # Miuix (HyperOS style)
