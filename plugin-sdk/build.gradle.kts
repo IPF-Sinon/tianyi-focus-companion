@@ -9,7 +9,6 @@ android {
     namespace = "top.funcun.companion.sdk"
     compileSdk = 35
 
-
     defaultConfig {
         minSdk = 29
     }
@@ -17,10 +16,6 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = "17"
     }
 
     buildFeatures {
