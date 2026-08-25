@@ -36,10 +36,10 @@ jobs:
       - name: 生成 Gradle Wrapper
         run: |
           # 下载指定版本 Gradle 生成 wrapper（避免用系统自带的 Gradle 9.7 与 AGP 8.7 不兼容）
-          curl -sL -o /tmp/gradle-bin.zip "https://services.gradle.org/distributions/gradle-8.13-bin.zip"
+          curl -sL -o /tmp/gradle-bin.zip "https://services.gradle.org/distributions/gradle-9.7-bin.zip"
           unzip -q /tmp/gradle-bin.zip -d /opt
-          export PATH=/opt/gradle-8.13/bin:$PATH
-          gradle wrapper --gradle-version 8.13
+          export PATH=/opt/gradle-9.7/bin:$PATH
+          gradle wrapper --gradle-version 9.7
           ls -la gradlew
 
       - name: 缓存 Gradle
