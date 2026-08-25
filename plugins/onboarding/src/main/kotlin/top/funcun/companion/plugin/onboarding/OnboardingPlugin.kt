@@ -39,6 +39,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.core.app.ActivityCompat
 
 
+private val BackgroundColor = Color(0xFFE8A0BF)
+private val SuccessColor = Color(0xFF6BBF6B)
+private val WarningColor = Color(0xFFFF6B6B)
+
+
 /**
  * 开屏权限引导插件。
  * 第一屏集中索要所有权限，授权完才进入主界面。
