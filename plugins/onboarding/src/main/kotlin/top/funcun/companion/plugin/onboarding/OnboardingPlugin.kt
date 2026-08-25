@@ -30,19 +30,6 @@ import top.funcun.companion.sdk.event.ActionType
 import top.funcun.companion.sdk.slot.UISlot
 import top.funcun.companion.sdk.util.PluginId
 import top.funcun.companion.sdk.util.SemVer
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.core.app.ActivityCompat
-
-
-private val BackgroundColor = Color(0xFFE8A0BF)
-private val SuccessColor = Color(0xFF6BBF6B)
-private val WarningColor = Color(0xFFFF6B6B)
-
 
 /**
  * 开屏权限引导插件。
@@ -76,25 +63,30 @@ class OnboardingPlugin : Plugin {
             PermissionScreen(
                 hostContext = ctx.getHostContext(),
                 onAllGranted = {
-                    ctx.eventBus.emit(AppEvent.CompanionAction(ActionT@Composable
+                    ctx.eventBus.emit(AppEvent.CompanionAction(ActionType.SMILE))
+                },
+            )
+        }
+    }
+
+    override suspend fun onDisable() {}
+    override suspend fun onUnload() {}
+
+    companion object {
+        private const val TAG = "OnboardingPlugin"
+    }
+}
+
+private val BackgroundColor = Color(0xFFE8A0BF)
+private val SuccessColor = Color(0xFF6BBF6B)
+private val WarningColor = Color(0xFFFF6B6B)
+
+@Composable
 fun PermissionScreen(
     hostContext: Context,
     onAllGranted: () -> Unit,
 ) {
     var showPermissionPage by remember { mutableStateOf(true) }
-
-    // 通知权限（Android 13+ 需要运行时弹窗）
-    val notificationLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { refreshTrigger++ }
-
-    // 相机权限（运行时弹窗）
-    val cameraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { refreshTrigger++ }
-
-    // 用于触发重新检测的计数器
-    var refreshTrigger by remember { mutableIntStateOf(0) }
 
     val permissionsStatus = remember {
         mutableStateMapOf(
@@ -107,46 +99,31 @@ fun PermissionScreen(
         )
     }
 
-    // 检测权限状态
-    fun checkPermissions(ctx: Context) {
+    LaunchedEffect(Unit) {
         permissionsStatus["通知"] = if (Build.VERSION.SDK_INT >= 33) {
-            ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) ==
+            ContextCompat.checkSelfPermission(hostContext, Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
         } else true
 
-        permissionsStatus["悬浮窗"] = Settings.canDrawOverlays(ctx)
+        permissionsStatus["悬浮窗"] = Settings.canDrawOverlays(hostContext)
 
         permissionsStatus["使用情况访问"] = if (Build.VERSION.SDK_INT >= 21) {
-            checkUsageStatsAccess(ctx)
+            try {
+                val usm = hostContext.getSystemService(android.app.usage.UsageStatsManager::class.java)
+                usm != null && usm.queryUsageStats(0, 0, 0).isNotEmpty()
+            } catch (_: Exception) { false }
         } else true
 
-        permissionsStatus["无障碍服务"] = checkAccessibilityEnabled(ctx)
+        permissionsStatus["无障碍服务"] = false
 
         permissionsStatus["摄像头"] = ContextCompat.checkSelfPermission(
-            ctx, Manifest.permission.CAMERA
+            hostContext, Manifest.permission.CAMERA
         ) == PackageManager.PERMISSION_GRANTED
 
         permissionsStatus["忽略电池优化"] = if (Build.VERSION.SDK_INT >= 23) {
-            val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
-            pm.isIgnoringBatteryOptimizations(ctx.packageName)
+            val pm = hostContext.getSystemService(Context.POWER_SERVICE) as PowerManager
+            pm.isIgnoringBatteryOptimizations(hostContext.packageName)
         } else true
-    }
-
-    // 初始检测 + 刷新触发
-    LaunchedEffect(refreshTrigger) {
-        checkPermissions(hostContext)
-    }
-
-    // 页面返回时刷新（onResume）
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                checkPermissions(hostContext)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     if (!showPermissionPage) return
@@ -157,41 +134,6 @@ fun PermissionScreen(
         if (allGranted) {
             onAllGranted()
             showPermissionPage = false
-        }
-    }
-
-    // 处理权限点击
-    fun handlePermissionClick(name: String) {
-        try {
-            when (name) {
-                "通知" -> {
-                    if (Build.VERSION.SDK_INT >= 33) {
-                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                        return
-                    }
-                }
-                "摄像头" -> {
-                    cameraLauncher.launch(Manifest.permission.CAMERA)
-                    return
-                }
-            }
-            // 其他权限走系统设置
-            val intent = getPermissionIntent(hostContext, name)
-            if (intent != null) {
-                hostContext.startActivity(intent)
-            } else {
-                val fallback = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                    data = android.net.Uri.fromParts("package", hostContext.packageName, null)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                hostContext.startActivity(fallback)
-            }
-        } catch (_: Exception) {
-            val fallback = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                data = android.net.Uri.fromParts("package", hostContext.packageName, null)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            hostContext.startActivity(fallback)
         }
     }
 
@@ -217,23 +159,30 @@ fun PermissionScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            val permissionIcons = mapOf(
-                "无障碍服务" to "♿",
-                "使用情况访问" to "📊",
-                "摄像头" to "📷",
-                "通知" to "🔔",
-                "忽略电池优化" to "🔋",
-                "悬浮窗" to "🪟",
-            )
             permissionsStatus.forEach { (name, granted) ->
+                // 每个权限项是可点击的按钮，点击跳转到对应设置页
+                val intent = getPermissionIntent(hostContext, name)
                 Button(
-                    onClick = { handlePermissionClick(name) },
+                    onClick = {
+                        if (intent != null) {
+                            try {
+                                hostContext.startActivity(intent)
+                            } catch (_: Exception) {
+                                // 降级到应用详情页
+                                val fallback = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = android.net.Uri.fromParts("package", hostContext.packageName, null)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                hostContext.startActivity(fallback)
+                            }
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White.copy(alpha = if (granted) 0.3f else 0.15f),
+                        containerColor = Color.White.copy(alpha = 0.15f),
                         contentColor = Color.White,
                     ),
                 ) {
@@ -242,10 +191,7 @@ fun PermissionScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = "${permissionIcons[name] ?: ""} $name",
-                            fontSize = 16.sp,
-                        )
+                        Text(text = name, fontSize = 16.sp)
                         Text(
                             text = if (granted) "已授予" else "未授予 →",
                             color = if (granted) SuccessColor else WarningColor,
@@ -278,20 +224,6 @@ fun PermissionScreen(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-
-        TextButton(onClick = {
-            showPermissionPage = false
-            onAllGranted()
-        }) {
-            Text(
-                "先跳过，天依会难过的",
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 14.sp,
-            )
-        }
-    }
-}
-       Spacer(modifier = Modifier.height(8.dp))
 
         TextButton(onClick = {
             showPermissionPage = false
