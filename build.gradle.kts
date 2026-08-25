@@ -16,12 +16,4 @@ subprojects {
             enabled = false
         }
     }
-
-    // KMP 库（Miuix/Coil 等）可能传递引入较新的 kotlin-stdlib，
-    // 但项目用 Kotlin 2.0.21 编译器。强制 stdlib 版本对齐，否则 metadata 不兼容。
-    configurations.configureEach {
-        resolutionStrategy {
-            force("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
-        }
-    }
 }
