@@ -4,9 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.serialization) apply false
-    // Hilt 和 KSP 不在 root 声明——都在 host 子项目本地应用。
-    // 确保 Hilt 和 KSP 使用同一类加载器，避免 Hilt 找不到 KSP task class 的报错。
-    alias(libs.plugins.ksp) apply false
+    // Hilt 和 KSP 都在 host 子项目本地应用，确保同一类加载器。
 }
 
 // Miuix 0.9.x 全部要求 minCompileSdk=37，但 AGP 8.7 最大支持 35。
