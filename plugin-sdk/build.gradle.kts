@@ -8,7 +8,6 @@ android {
     namespace = "top.funcun.companion.sdk"
     compileSdk = 35
 
-    checkAarMetadata = false
 
     defaultConfig {
         minSdk = 29

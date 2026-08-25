@@ -9,10 +9,6 @@ android {
     namespace = "top.funcun.companion"
     compileSdk = 35
 
-    // Miuix 0.9.4 要求 compileSdk 37，但 AGP 8.7 最大支持 35。
-    // 关闭 AAR metadata 检查以绕过该硬性要求（Miuix 实际不使用 API 37 特性，仅用它编译过）。
-    checkAarMetadata = false
-
     defaultConfig {
         applicationId = "top.funcun.companion.app"
         minSdk = 29

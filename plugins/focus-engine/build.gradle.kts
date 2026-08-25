@@ -7,7 +7,6 @@ android {
     namespace = "top.funcun.companion.plugin.focus.engine"
     compileSdk = 35
 
-    checkAarMetadata = false
 
     defaultConfig {
         minSdk = 29
