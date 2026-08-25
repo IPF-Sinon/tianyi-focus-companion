@@ -1,11 +1,14 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
 }
 
 android {
     namespace = "top.funcun.companion.sdk"
-    compileSdk = 37
+    compileSdk = 35
+
+    checkAarMetadata = false
 
     defaultConfig {
         minSdk = 29
@@ -14,6 +17,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
     buildFeatures {

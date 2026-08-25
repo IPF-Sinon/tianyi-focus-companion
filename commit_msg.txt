@@ -1,0 +1,15 @@
+Fix: revert to AGP 8.7.3 + compileSdk 35, bypass Miuix AAR check
+
+AGP 9.x requires a massive toolchain upgrade (Kotlin 2.3+, KSP 2.3.1+,
+Hilt 2.59+, Gradle 9.1+) and has max API 36.1, making compileSdk 37
+unsupported. Revert to the stable AGP 8.7.3 + compileSdk 35 combo.
+
+To keep Miuix 0.9.4 (which requires compileSdk 37), set checkAarMetadata
+= false in all android blocks to bypass the hard min-compileSdk AAR check.
+
+Changes:
+- AGP 9.1.0 -> 8.7.3, compileSdk 37 -> 35, targetSdk 37 -> 35
+- Re-add kotlin-android plugin (AGP 8 needs it), re-add kotlinOptions
+- Re-add kotlin-serialization catalog entry (needed by plugin-sdk)
+- Add checkAarMetadata = false everywhere
+- Workflow: Gradle 8.9, no android-37 symlink needed

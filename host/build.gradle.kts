@@ -1,17 +1,22 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "top.funcun.companion"
-    compileSdk = 37
+    compileSdk = 35
+
+    // Miuix 0.9.4 要求 compileSdk 37，但 AGP 8.7 最大支持 35。
+    // 关闭 AAR metadata 检查以绕过该硬性要求（Miuix 实际不使用 API 37 特性，仅用它编译过）。
+    checkAarMetadata = false
 
     defaultConfig {
         applicationId = "top.funcun.companion.app"
         minSdk = 29
-        targetSdk = 37
+        targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
     }
@@ -29,6 +34,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
     buildFeatures {

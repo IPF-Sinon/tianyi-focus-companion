@@ -29,25 +29,18 @@ jobs:
 
       - name: 安装 Android SDK 组件
         run: |
-          # 平台已预装在 runner 上（android-37.0 等），只需补 build-tools 和 platform-tools
+          # 平台 android-35 已预装在 runner 上，补装 build-tools 和 platform-tools
           yes | sdkmanager "build-tools;35.0.0" "platform-tools" > /dev/null 2>&1 || true
           yes | sdkmanager --licenses > /dev/null 2>&1 || true
 
-      - name: 修复 android-37 SDK 命名（runner 装为 android-37.0）
-        run: |
-          ln -sf $ANDROID_SDK_ROOT/platforms/android-37.0 $ANDROID_SDK_ROOT/platforms/android-37 || true
-          ls -la $ANDROID_SDK_ROOT/platforms/android-37
-
       - name: 生成 Gradle Wrapper
         run: |
-          apt-get update -qq && apt-get install -y -qq gradle 2>/dev/null || true
-          # 如果系统没装 gradle，去下载
-          if ! command -v gradle &> /dev/null; then
-            curl -sL -o /tmp/gradle-bin.zip "https://services.gradle.org/distributions/gradle-8.11.1-bin.zip"
-            unzip -q /tmp/gradle-bin.zip -d /opt
-            export PATH=/opt/gradle-8.11.1/bin:$PATH
-          fi
-          gradle wrapper --gradle-version 8.11.1
+          # 下载指定版本 Gradle 生成 wrapper（避免用系统自带的 Gradle 9.7 与 AGP 8.7 不兼容）
+          curl -sL -o /tmp/gradle-bin.zip "https://services.gradle.org/distributions/gradle-8.9-bin.zip"
+          unzip -q /tmp/gradle-bin.zip -d /opt
+          export PATH=/opt/gradle-8.9/bin:$PATH
+          gradle wrapper --gradle-version 8.9
+          ls -la gradlew
 
       - name: 缓存 Gradle
         uses: actions/cache@v4
