@@ -4,7 +4,16 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.kotlin.serialization) apply false
-    // Hilt 和 KSP 都在 host 子项目本地应用，确保同一类加载器。
+    alias(libs.plugins.hilt) apply false
+    // KSP 子项目本地应用，但加到 root buildscript classpath 让 Hilt 可访问其 task class
+}
+
+buildscript {
+    dependencies {
+        // KSP 2.3.x 的解耦插件需要显式加到 root classpath，
+        // 否则 Hilt Gradle 插件（在 root classloader 中）找不到 KSP task class。
+        classpath("com.google.devtools.ksp:symbol-processing-gradle-plugin:2.3.11")
+    }
 }
 
 // Miuix 0.9.x 全部要求 minCompileSdk=37，但 AGP 8.7 最大支持 35。
