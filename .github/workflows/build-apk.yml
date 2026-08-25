@@ -29,8 +29,14 @@ jobs:
 
       - name: 安装 Android SDK 组件
         run: |
-          sdkmanager "platforms;android-37" "build-tools;35.0.0" "platform-tools"
-          yes | sdkmanager --licenses
+          # 平台已预装在 runner 上（android-37.0 等），只需补 build-tools 和 platform-tools
+          yes | sdkmanager "build-tools;35.0.0" "platform-tools" > /dev/null 2>&1 || true
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: 修复 android-37 SDK 命名（runner 装为 android-37.0）
+        run: |
+          ln -sf $ANDROID_SDK_ROOT/platforms/android-37.0 $ANDROID_SDK_ROOT/platforms/android-37 || true
+          ls -la $ANDROID_SDK_ROOT/platforms/android-37
 
       - name: 生成 Gradle Wrapper
         run: |
