@@ -168,14 +168,16 @@ private fun WeekBarChart() {
                             .fillMaxWidth()
                             .height(96.dp),
                     ) {
-                        val barHeight = size.height * barHeightFraction
-                        val barWidth = size.width * 0.5f
-                        val x = (size.width - barWidth) / 2
+                        val canvasWidth = this.size.width
+                        val canvasHeight = this.size.height
+                        val barHeight = canvasHeight * barHeightFraction
+                        val barWidth = canvasWidth * 0.5f
+                        val x = (canvasWidth - barWidth) / 2
                         drawRoundRect(
                             brush = Brush.verticalGradient(
                                 colors = listOf(primary, primaryLight),
                             ),
-                            topLeft = Offset(x, size.height - barHeight),
+                            topLeft = Offset(x, canvasHeight - barHeight),
                             size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
                             cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
                         )
