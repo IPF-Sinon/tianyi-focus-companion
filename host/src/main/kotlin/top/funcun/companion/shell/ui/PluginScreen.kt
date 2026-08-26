@@ -1,6 +1,5 @@
 package top.funcun.companion.shell.ui
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,15 +11,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -30,30 +26,33 @@ import top.funcun.companion.shell.PluginManager
 
 /** 插件展示项 */
 data class PluginListItem(
-    val id: String,
+    val id: Int,
     val name: String,
     val description: String,
     val version: String,
     val icon: String,
+    val enabled: Boolean,
 )
 
 /**
- * 插件页，对标 Web 设计稿 page-plugins：
- * 头部 + 市场按钮 + 插件列表（图标/名称/描述/开关）。
+ * 插件页。
+ *
+ * 展示已加载插件的真实信息（名称/描述/版本/启用状态）。
+ * 未实现的插件管理功能（安装/卸载/动态开关）不展示假控件。
  */
 @Composable
 fun PluginScreen(
     pluginManager: PluginManager,
 ) {
-    // 从 PluginManager 读取内置插件元数据
     val plugins = remember {
-        pluginManager.getBuiltinPluginInfo().map { info ->
+        pluginManager.getBuiltinPluginInfo().mapIndexed { index, info ->
             PluginListItem(
-                id = info.id,
+                id = index,
                 name = info.name,
                 description = info.description,
                 version = "v${info.version}",
                 icon = pluginIcon(info.name),
+                enabled = info.enabled,
             )
         }
     }
@@ -65,32 +64,12 @@ fun PluginScreen(
     ) {
         Spacer(Modifier.height(8.dp))
 
-        // 头部
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "🧩 插件",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Surface(
-                shape = RoundedCornerShape(percent = 50),
-                color = MaterialTheme.colorScheme.primary,
-                onClick = {},
-            ) {
-                Text(
-                    text = "市场",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                )
-            }
-        }
+        Text(
+            text = "🧩 插件",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
 
         Spacer(Modifier.height(16.dp))
 
@@ -106,12 +85,10 @@ fun PluginScreen(
 }
 
 /**
- * 插件行：图标 + 信息 + 开关。
+ * 插件行：图标 + 信息 + 真实启用状态标签。
  */
 @Composable
 private fun PluginRow(plugin: PluginListItem) {
-    var enabled by remember { mutableStateOf(true) }
-
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -125,7 +102,6 @@ private fun PluginRow(plugin: PluginListItem) {
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // 图标
             Surface(
                 shape = MaterialTheme.shapes.small,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
@@ -160,10 +136,27 @@ private fun PluginRow(plugin: PluginListItem) {
                 )
             }
             Spacer(Modifier.width(8.dp))
-            Switch(
-                checked = enabled,
-                onCheckedChange = { enabled = it },
-            )
+            // 启用状态标签（真实状态，只读展示）
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = if (plugin.enabled) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant
+                },
+            ) {
+                Text(
+                    text = if (plugin.enabled) "已启用" else "未启用",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = if (plugin.enabled) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                )
+            }
         }
     }
 }
@@ -172,6 +165,7 @@ private fun PluginRow(plugin: PluginListItem) {
 private fun pluginIcon(name: String): String = when {
     name.contains("开屏") || name.contains("权限") -> "🔔"
     name.contains("番茄") || name.contains("专注") || name.contains("引擎") -> "🍅"
+    name.contains("HTML") || name.contains("主界面") -> "🌐"
     name.contains("角色") || name.contains("天依") || name.contains("人格") -> "🎭"
     name.contains("拦截") || name.contains("锁机") || name.contains("黑名单") -> "🛡️"
     name.contains("摄像头") || name.contains("巡查") -> "📷"

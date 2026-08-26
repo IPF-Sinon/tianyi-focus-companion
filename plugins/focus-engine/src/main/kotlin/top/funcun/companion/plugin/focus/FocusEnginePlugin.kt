@@ -59,6 +59,28 @@ class FocusEnginePlugin : Plugin {
     }
 
     override suspend fun onEnable() {
+        // 注册专注服务，供 HTML 主界面等插件调用
+        ctx.registerService(FocusServiceToken, object : FocusService {
+            override val state: StateFlow<FocusState> = focusStateMachine.state
+            override val targetMinutes: Int
+                get() = focusStateMachine.targetMinutesValue
+            override val remainingSeconds: Int
+                get() = focusStateMachine.getRemainingSeconds()
+
+            override fun start(targetMinutes: Int) {
+                focusJob = CoroutineScope(Dispatchers.Default).launch {
+                    focusStateMachine.start(targetMinutes)
+                }
+            }
+
+            override fun stop() {
+                focusJob?.cancel()
+                focusJob = CoroutineScope(Dispatchers.Default).launch {
+                    focusStateMachine.stop()
+                }
+            }
+        })
+
         ctx.registerUI(UISlot.FOCUS_FULLSCREEN) {
             FocusFullscreen(
                 stateMachine = focusStateMachine,
@@ -102,6 +124,9 @@ class FocusStateMachine(
     private var remainingSeconds = 0
     private var targetMinutes = 25
     private var timerJob: Job? = null
+
+    /** 目标时长（分钟） */
+    val targetMinutesValue: Int get() = targetMinutes
 
     suspend fun start(targetMinutes: Int) {
         if (_state.value != FocusState.IDLE) return

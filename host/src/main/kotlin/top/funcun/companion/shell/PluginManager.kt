@@ -29,6 +29,7 @@ class PluginManager(private val context: Context) {
         private val BUILTIN_PLUGINS = listOf(
             "top.funcun.companion.plugin.onboarding.OnboardingPlugin",
             "top.funcun.companion.plugin.focus.FocusEnginePlugin",
+            "top.funcun.companion.plugin.homehtml.HomeHtmlPlugin",
             "top.funcun.companion.plugin.affection.AffectionPlugin",
             "top.funcun.companion.plugin.character.TianyiCharacterPlugin",
             "top.funcun.companion.plugin.voice.VoiceConversationPlugin",

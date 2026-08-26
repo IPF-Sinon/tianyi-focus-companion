@@ -1,98 +1,63 @@
 package top.funcun.companion.shell.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import top.funcun.companion.sdk.slot.UISlot
-import top.funcun.companion.shell.components.CompanionHeader
-import top.funcun.companion.shell.components.SpeechBubble
-import top.funcun.companion.shell.components.TimerCard
-import top.funcun.companion.shell.components.StatCard
 
 /**
- * 专注页（首页），对标 Web 设计稿 page-home：
- * 天依头部 → 台词气泡 → 计时器卡 → 3 宫格统计摘要。
+ * 主界面（专注 Tab）。
+ *
+ * 优先渲染 home-html 插件注册到 HOME_TOP 的全屏 HTML 主界面（WebView）。
+ * 若未注册（如用户移除插件），显示简洁占位页，不展示未实现功能的假 UI。
  */
 @Composable
 fun HomeScreen(
     getSlotContents: (UISlot) -> List<@Composable () -> Unit>,
 ) {
+    val homeContents = getSlotContents(UISlot.HOME_TOP)
+
+    if (homeContents.isNotEmpty()) {
+        // HTML 主界面插件已注册 → 全屏渲染（插件内部再处理开屏权限引导）
+        Box(modifier = Modifier.fillMaxSize()) {
+            homeContents.forEach { it() }
+        }
+        return
+    }
+
+    // 兜底占位：无 HTML 主界面插件时的简洁提示
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
     ) {
+        Text(
+            text = "依见钟勤",
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
         Spacer(Modifier.height(8.dp))
-
-        // 开屏权限引导（首次启动，跳过/完成后不渲染）
-        getSlotContents(UISlot.HOME_TOP).forEach { it() }
-
-        // 天依头部
-        CompanionHeader()
-
-        Spacer(Modifier.height(12.dp))
-
-        // 台词气泡
-        SpeechBubble(
-            text = "“今天也很认真呢！还有 12 分钟就可以休息啦，加油～”",
-            timeTag = "刚刚 · 第 3 个番茄",
+        Text(
+            text = "未安装 HTML 主界面插件，请安装 home-html 插件后使用自定义主界面。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
         )
-
-        Spacer(Modifier.height(16.dp))
-
-        // 计时器卡（demo 状态：12:48 运行中，进度 50%）
-        TimerCard(
-            minutes = 12,
-            seconds = 48,
-            progress = 0.5f,
-            isRunning = true,
-            modeLabel = "25:00 · 无限",
-            onPauseResume = {},
-            onRestart = {},
-            onStop = {},
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        // 3 宫格统计摘要
-        androidx.compose.foundation.layout.Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
-        ) {
-            StatCard(
-                value = "1.2",
-                unit = "h",
-                description = "今日专注",
-                modifier = Modifier.weight(1f),
-            )
-            StatCard(
-                value = "7",
-                unit = "🔥",
-                description = "连续天数",
-                modifier = Modifier.weight(1f),
-            )
-            StatCard(
-                value = "★ 3",
-                description = "剩余红星",
-                modifier = Modifier.weight(1f),
-            )
-        }
-
-        // 好感度/荣誉卡片区（插件注册）
-        Spacer(Modifier.height(16.dp))
-        getSlotContents(UISlot.HOME_CARD).forEach { it() }
-
-        Spacer(Modifier.height(24.dp))
     }
 }

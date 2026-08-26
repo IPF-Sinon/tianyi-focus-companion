@@ -45,6 +45,7 @@ dependencies {
     implementation(project(":plugins:example-hello"))
     implementation(project(":plugins:onboarding"))
     implementation(project(":plugins:focus-engine"))
+    implementation(project(":plugins:home-html"))
     implementation(project(":plugins:affection-system"))
     implementation(project(":plugins:character-tianyi"))
     implementation(project(":plugins:voice-conversation"))

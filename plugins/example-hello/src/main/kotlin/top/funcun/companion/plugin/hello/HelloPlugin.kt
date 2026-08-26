@@ -1,16 +1,9 @@
 package top.funcun.companion.plugin.hello
 
 import android.util.Log
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import top.funcun.companion.sdk.Plugin
 import top.funcun.companion.sdk.PluginContext
 import top.funcun.companion.sdk.event.AppEvent
-import top.funcun.companion.sdk.slot.UISlot
 import top.funcun.companion.sdk.util.PluginId
 import top.funcun.companion.sdk.util.SemVer
 
@@ -40,11 +33,6 @@ class HelloPlugin : Plugin {
         context.eventBus.subscribe<AppEvent.AffectionChanged> { event ->
             Log.i(TAG, "好感度变化: ${event.oldValue} → ${event.newValue} (${event.reason})")
         }
-
-        // 注册一个 UI 组件到首页卡片插槽
-        context.registerUI(UISlot.HOME_CARD) {
-            HelloGreeting()
-        }
     }
 
     override suspend fun onEnable() {
@@ -61,16 +49,5 @@ class HelloPlugin : Plugin {
 
     companion object {
         private const val TAG = "HelloPlugin"
-    }
-}
-
-@Composable
-fun HelloGreeting() {
-    Column(
-        modifier = Modifier.padding(16.dp),
-    ) {
-        Text(
-            text = "天依今天心情很好～",
-        )
     }
 }

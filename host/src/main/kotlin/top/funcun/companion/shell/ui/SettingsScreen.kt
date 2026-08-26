@@ -1,7 +1,6 @@
 package top.funcun.companion.shell.ui
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -12,21 +11,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import top.funcun.companion.sdk.slot.UISlot
-import top.funcun.companion.shell.components.SettingsGroup
-import top.funcun.companion.shell.components.SettingsGroupTitle
-import top.funcun.companion.shell.components.SettingsItem
-import top.funcun.companion.shell.components.ToggleSettingItem
 
 /**
- * 设置页，对标 Web 设计稿 page-settings：
- * 分组设置（专注 / 拦截&巡查 / 关于）+ 插件扩展区。
+ * 设置页。
+ *
+ * 仅展示插件注册的真实设置项（SETTINGS_SECTION，如权限管理）。
+ * 未实现的设置功能（黑名单/白噪音/深度锁机等）不展示假选项。
  */
 @Composable
 fun SettingsScreen(
     getSlotContents: (UISlot) -> List<@Composable () -> Unit>,
 ) {
+    val sections = getSlotContents(UISlot.SETTINGS_SECTION)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -38,84 +38,21 @@ fun SettingsScreen(
         Text(
             text = "⚙️ 设置",
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
         )
 
         Spacer(Modifier.height(16.dp))
 
-        // 插件设置扩展区（权限管理、插件市场等）
-        getSlotContents(UISlot.SETTINGS_SECTION).forEach { it() }
-
-        Spacer(Modifier.height(16.dp))
-
-        // 分组：专注
-        SettingsGroupTitle("专注")
-        SettingsGroup {
-            SettingsItem(
-                icon = "⏱️",
-                title = "专注时长",
-                subtitle = "25 分钟",
-                onClick = {},
+        if (sections.isEmpty()) {
+            Text(
+                text = "暂无设置项。安装相应插件后在此展示。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 24.dp),
             )
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-            )
-            ToggleSettingItem(
-                icon = "🔊",
-                title = "白噪音",
-                subtitle = "雨声 · 低",
-                checked = true,
-                onCheckedChange = {},
-            )
-        }
-
-        Spacer(Modifier.height(20.dp))
-
-        // 分组：拦截 & 巡查
-        SettingsGroupTitle("拦截 & 巡查")
-        SettingsGroup {
-            SettingsItem(
-                icon = "🚫",
-                title = "黑名单应用",
-                subtitle = "抖音, 微信, 游戏",
-                onClick = {},
-            )
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-            )
-            ToggleSettingItem(
-                icon = "🛡️",
-                title = "深度锁机",
-                subtitle = "遣返后锁屏 30s",
-                checked = true,
-                onCheckedChange = {},
-            )
-        }
-
-        Spacer(Modifier.height(20.dp))
-
-        // 分组：关于
-        SettingsGroupTitle("关于")
-        SettingsGroup {
-            SettingsItem(
-                icon = "ℹ️",
-                title = "版本",
-                subtitle = "依见钟勤 v0.1.0",
-                onClick = {},
-            )
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-            )
-            SettingsItem(
-                icon = "📄",
-                title = "开源协议",
-                subtitle = "Apache 2.0",
-                onClick = {},
-            )
+        } else {
+            sections.forEach { it() }
         }
 
         Spacer(Modifier.height(24.dp))
