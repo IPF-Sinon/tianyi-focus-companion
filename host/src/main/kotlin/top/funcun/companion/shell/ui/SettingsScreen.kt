@@ -1,7 +1,7 @@
 package top.funcun.companion.shell.ui
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.HorizontalDivider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
