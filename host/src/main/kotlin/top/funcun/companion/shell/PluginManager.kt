@@ -227,6 +227,27 @@ class PluginManager(private val context: Context) {
     /** 获取所有已加载的插件 */
     fun getLoadedPlugins(): Map<PluginId, Plugin> = plugins.toMap()
 
+    /** 插件展示信息 */
+    data class PluginInfo(
+        val id: String,
+        val name: String,
+        val description: String,
+        val version: String,
+        val enabled: Boolean,
+    )
+
+    /** 获取内置插件展示信息（供插件页 UI 使用） */
+    fun getBuiltinPluginInfo(): List<PluginInfo> =
+        plugins.map { (id, plugin) ->
+            PluginInfo(
+                id = id.value,
+                name = plugin.name,
+                description = plugin.description,
+                version = plugin.version.toString(),
+                enabled = pluginStates[id] == PluginState.ENABLED,
+            )
+        }
+
     /** 异步关闭所有插件 */
     suspend fun shutdown() {
         plugins.keys.toList().forEach { pluginId ->

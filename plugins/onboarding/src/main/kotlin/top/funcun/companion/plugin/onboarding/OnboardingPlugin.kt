@@ -361,6 +361,7 @@ fun PermissionSettingsSection(
             onOpenAccessibilitySettings = {
                 openPermissionSettings(hostContext, PermissionUiState.ACCESSIBILITY_NAME)
             },
+            flat = true,
         )
     }
 }
