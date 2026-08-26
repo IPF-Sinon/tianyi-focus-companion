@@ -170,14 +170,14 @@ fun PermissionScreen(
     // ── 运行时权限请求 Launcher：通知 ──
     val notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted ->
+    ) { granted: Boolean ->
         permissionsStatus["通知"] = granted
     }
 
     // ── 运行时权限请求 Launcher：相机 ──
     val cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted ->
+    ) { granted: Boolean ->
         permissionsStatus["摄像头"] = granted
     }
 
