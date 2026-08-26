@@ -1,22 +1,16 @@
 package top.funcun.companion.plugin.onboarding
 
-import android.accessibilityservice.AccessibilityServiceInfo
 import android.Manifest
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.PowerManager
 import android.provider.Settings
 import android.util.Log
-import android.view.accessibility.AccessibilityManager
-import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -28,9 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.viewmodel.compose.viewModel
 import top.funcun.companion.sdk.Plugin
 import top.funcun.companion.sdk.PluginContext
 import top.funcun.companion.sdk.event.AppEvent
@@ -43,6 +37,11 @@ import top.funcun.companion.sdk.util.SemVer
  * 开屏权限引导插件。
  * 首次启动时全屏引导用户授予权限，授权/跳过通过 SharedPreferences 持久化。
  * 同时在设置页注册「权限管理」入口，方便跳过用户重新授权。
+ *
+ * 架构参考 Operit：
+ * - PermissionViewModel + StateFlow 管理权限状态
+ * - PermissionStatusItem 单行状态项
+ * - AccessibilityWizardCard 分步无障碍引导
  */
 class OnboardingPlugin : Plugin {
 
@@ -97,111 +96,63 @@ class OnboardingPlugin : Plugin {
     }
 }
 
-// ── 权限状态检查 ──────────────────────────────────────────────────
+// ── ViewModel 组合入口 ──────────────────────────────────────────
 
-/**
- * 检查所有权限状态，写入 [status]。
- * 支持运行时权限（通知/相机）检测、系统设置权限（悬浮窗/使用情况/无障碍/电池优化）检测。
- */
-private fun Context.checkPermissions(status: MutableMap<String, Boolean>) {
-    status["通知"] = if (Build.VERSION.SDK_INT >= 33) {
-        ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
-    } else true
-
-    status["悬浮窗"] = Settings.canDrawOverlays(this)
-
-    status["使用情况访问"] = if (Build.VERSION.SDK_INT >= 21) {
-        try {
-            val usm = getSystemService(android.app.usage.UsageStatsManager::class.java)
-            if (usm == null) {
-                false
-            } else {
-                val now = System.currentTimeMillis()
-                // 权限已授予时 queryUsageStats 不会抛 SecurityException（结果可能为空，
-                // 但代表着「有权限且暂无使用记录」，仍然算作已授权）
-                @Suppress("UNUSED_EXPRESSION")
-                usm.queryUsageStats(
-                    android.app.usage.UsageStatsManager.INTERVAL_DAILY,
-                    now - 24 * 60 * 60 * 1000,
-                    now
-                )
-                true
-            }
-        } catch (_: Exception) {
-            false
-        }
-    } else true
-
-    // 无障碍服务：通过 AccessibilityManager 检测 FocusAccessibilityService 是否已启用
-    status["无障碍服务"] = if (Build.VERSION.SDK_INT >= 21) {
-        try {
-            val am = getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
-            val serviceName = ComponentName(
-                packageName,
-                OnboardingPlugin.ACCESSIBILITY_SERVICE_CLASS
-            )
-            am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
-                .any { info ->
-                    val si = info.resolveInfo?.serviceInfo ?: return@any false
-                    si.packageName == serviceName.packageName && si.name == serviceName.className
-                }
-        } catch (_: Exception) {
-            false
-        }
-    } else false
-
-    status["摄像头"] = ContextCompat.checkSelfPermission(
-        this, Manifest.permission.CAMERA
-    ) == PackageManager.PERMISSION_GRANTED
-
-    status["忽略电池优化"] = if (Build.VERSION.SDK_INT >= 23) {
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        pm.isIgnoringBatteryOptimizations(packageName)
-    } else true
-}
-
-// ── 权限状态 Composable 状态持有器 ───────────────────────────────
-
-/**
- * 权限状态 + 运行时权限 Launcher 的持有器。
- * launcher 在组合阶段创建，点击回调中使用。
- */
-private class PermissionState {
-    val status = mutableStateMapOf(
-        "通知" to false,
-        "悬浮窗" to false,
-        "使用情况访问" to false,
-        "无障碍服务" to false,
-        "摄像头" to false,
-        "忽略电池优化" to false,
-    )
+/** 权限状态与运行时 Launcher 的组合持有 */
+private class PermissionUiBindings(
+    val viewModel: PermissionViewModel,
+) {
     var notificationLauncher: ManagedActivityResultLauncher<String, Boolean>? = null
     var cameraLauncher: ManagedActivityResultLauncher<String, Boolean>? = null
+
+    fun onPermissionClick(context: Context, name: String, openSettings: (Context, String) -> Unit) {
+        when (name) {
+            PermissionUiState.NOTIFICATION_NAME -> {
+                if (Build.VERSION.SDK_INT >= 33) {
+                    notificationLauncher?.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        ?: openSettings(context, name)
+                } else {
+                    openSettings(context, name)
+                }
+            }
+            PermissionUiState.CAMERA_NAME -> {
+                if (Build.VERSION.SDK_INT >= 23) {
+                    cameraLauncher?.launch(Manifest.permission.CAMERA)
+                        ?: openSettings(context, name)
+                } else {
+                    openSettings(context, name)
+                }
+            }
+            else -> openSettings(context, name)
+        }
+    }
 }
 
 /**
- * 创建并持有权限状态，注册 onResume 自动刷新。
+ * 创建并持有 PermissionViewModel + 运行时 Launcher，
+ * 注册初始检查与 onResume 自动刷新。
  */
 @Composable
-private fun rememberPermissionState(hostContext: Context): PermissionState {
-    val state = remember { PermissionState() }
+private fun rememberPermissionBindings(hostContext: Context): PermissionUiBindings {
+    // viewModel() 是 Composable 调用，必须在 remember 外先获取
+    val vm: PermissionViewModel = viewModel()
+    val bindings = remember(vm) { PermissionUiBindings(vm) }
 
-    state.notificationLauncher = rememberLauncherForActivityResult(
+    bindings.notificationLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted: Boolean ->
-        state.status["通知"] = granted
+        vm.onNotificationResult(granted)
     }
 
-    state.cameraLauncher = rememberLauncherForActivityResult(
+    bindings.cameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted: Boolean ->
-        state.status["摄像头"] = granted
+        vm.onCameraResult(granted)
     }
 
     // 初始检查
     LaunchedEffect(Unit) {
-        hostContext.checkPermissions(state.status)
+        vm.checkPermissions(hostContext)
     }
 
     // onResume 刷新：从系统设置页返回时自动更新
@@ -209,41 +160,32 @@ private fun rememberPermissionState(hostContext: Context): PermissionState {
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                hostContext.checkPermissions(state.status)
+                vm.checkPermissions(hostContext)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    return state
+    return bindings
 }
 
-// ── 权限项图标 ──────────────────────────────────────────────────
-
-private fun permissionIcon(name: String): String = when (name) {
-    "通知" -> "🔔"
-    "悬浮窗" -> "🪟"
-    "使用情况访问" -> "📊"
-    "无障碍服务" -> "♿"
-    "摄像头" -> "📷"
-    "忽略电池优化" -> "🔋"
-    else -> "⚙️"
-}
-
-// ── 通用权限列表组件（FolkPatch 风格卡片） ───────────────────────
+// ── 通用权限列表（FolkPatch 卡片 + Operit 状态项） ───────────────
 
 /**
- * 权限列表卡片，参考 FolkPatch UI：
- * - RoundedCornerShape(24.dp) Card，surfaceContainer 底色
- * - ListItem 行：图标 + 名称 + 状态标签
- * - 点击行执行 [onClick]
+ * 权限列表卡片：
+ * - FolkPatch 风格 RoundedCornerShape(24.dp) surfaceContainer 卡片
+ * - 内部使用 Operit 风格 PermissionStatusItem 单行状态项
+ * - 无障碍服务未授予时点击展开 AccessibilityWizardCard 分步向导
  */
 @Composable
 private fun PermissionList(
-    permissionsStatus: Map<String, Boolean>,
+    uiState: PermissionUiState,
     onClick: (String) -> Unit,
+    onOpenAccessibilitySettings: () -> Unit,
 ) {
+    var wizardExpanded by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -252,86 +194,42 @@ private fun PermissionList(
         ),
     ) {
         Column {
-            permissionsStatus.entries.forEachIndexed { index, (name, granted) ->
+            uiState.entries.forEachIndexed { index, entry ->
                 if (index > 0) {
                     HorizontalDivider(
                         modifier = Modifier.padding(horizontal = 16.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
                     )
                 }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onClick(name) }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = permissionIcon(name),
-                        fontSize = 20.sp,
-                        modifier = Modifier.padding(end = 12.dp),
-                    )
-                    Text(
-                        text = name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (granted) {
-                            MaterialTheme.colorScheme.primaryContainer
+                val isAccessibility = entry.name == PermissionUiState.ACCESSIBILITY_NAME
+                PermissionStatusItem(
+                    icon = entry.icon,
+                    title = entry.name,
+                    level = entry.level,
+                    isGranted = uiState.status[entry.name] == true,
+                    onClick = {
+                        if (isAccessibility && uiState.accessibilityGranted.not()) {
+                            wizardExpanded = !wizardExpanded
                         } else {
-                            MaterialTheme.colorScheme.errorContainer
-                        },
+                            onClick(entry.name)
+                        }
+                    },
+                )
+                // 无障碍服务分步向导（内嵌在该项下方）
+                if (isAccessibility) {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = wizardExpanded && !uiState.accessibilityGranted
                     ) {
-                        Text(
-                            text = if (granted) "已授予" else "未授予",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (granted) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onErrorContainer
-                            },
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        )
+                        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+                            AccessibilityWizardCard(
+                                isServiceEnabled = uiState.accessibilityGranted,
+                                onOpenAccessibilitySettings = onOpenAccessibilitySettings,
+                            )
+                        }
                     }
                 }
             }
         }
-    }
-}
-
-// ── 权限点击处理（运行时弹窗优先） ───────────────────────────────
-
-/**
- * 权限点击回调：
- * - 通知（Android 13+）/ 相机（Android 6+）→ 运行时权限弹窗
- * - 其余跳转系统设置页
- */
-private fun permissionClickHandler(
-    hostContext: Context,
-    state: PermissionState,
-): (String) -> Unit = { name ->
-    when (name) {
-        "通知" -> {
-            if (Build.VERSION.SDK_INT >= 33) {
-                state.notificationLauncher?.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    ?: openSettings(hostContext, name)
-            } else {
-                openSettings(hostContext, name)
-            }
-        }
-        "摄像头" -> {
-            if (Build.VERSION.SDK_INT >= 23) {
-                state.cameraLauncher?.launch(Manifest.permission.CAMERA)
-                    ?: openSettings(hostContext, name)
-            } else {
-                openSettings(hostContext, name)
-            }
-        }
-        else -> openSettings(hostContext, name)
     }
 }
 
@@ -348,13 +246,12 @@ fun PermissionScreen(
 ) {
     val prefs = remember { hostContext.getSharedPreferences(OnboardingPlugin.PREFS_NAME, Context.MODE_PRIVATE) }
     var showPermissionPage by remember { mutableStateOf(prefs.getBoolean(OnboardingPlugin.KEY_SHOW_PAGE, true)) }
-    val state = rememberPermissionState(hostContext)
-    val onClick = permissionClickHandler(hostContext, state)
+    val bindings = rememberPermissionBindings(hostContext)
+    val uiState by bindings.viewModel.uiState.collectAsState()
 
     // 全部授予后自动隐藏
-    val allGranted = state.status.values.all { it }
-    LaunchedEffect(allGranted) {
-        if (allGranted) {
+    LaunchedEffect(uiState.allGranted) {
+        if (uiState.allGranted) {
             prefs.edit().putBoolean(OnboardingPlugin.KEY_SHOW_PAGE, false).apply()
             onAllGranted()
             showPermissionPage = false
@@ -382,8 +279,15 @@ fun PermissionScreen(
         Spacer(modifier = Modifier.height(28.dp))
 
         PermissionList(
-            permissionsStatus = state.status,
-            onClick = onClick,
+            uiState = uiState,
+            onClick = { name ->
+                bindings.onPermissionClick(hostContext, name) { c, n ->
+                    openPermissionSettings(c, n)
+                }
+            },
+            onOpenAccessibilitySettings = {
+                openPermissionSettings(hostContext, PermissionUiState.ACCESSIBILITY_NAME)
+            },
         )
 
         Spacer(modifier = Modifier.height(28.dp))
@@ -426,8 +330,8 @@ fun PermissionScreen(
 fun PermissionSettingsSection(
     hostContext: Context,
 ) {
-    val state = rememberPermissionState(hostContext)
-    val onClick = permissionClickHandler(hostContext, state)
+    val bindings = rememberPermissionBindings(hostContext)
+    val uiState by bindings.viewModel.uiState.collectAsState()
 
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text(
@@ -439,8 +343,15 @@ fun PermissionSettingsSection(
         )
 
         PermissionList(
-            permissionsStatus = state.status,
-            onClick = onClick,
+            uiState = uiState,
+            onClick = { name ->
+                bindings.onPermissionClick(hostContext, name) { c, n ->
+                    openPermissionSettings(c, n)
+                }
+            },
+            onOpenAccessibilitySettings = {
+                openPermissionSettings(hostContext, PermissionUiState.ACCESSIBILITY_NAME)
+            },
         )
     }
 }
@@ -450,7 +361,7 @@ fun PermissionSettingsSection(
 /**
  * 跳转到对应权限的系统设置页；失败时降级到应用详情页。
  */
-private fun openSettings(context: Context, permissionName: String) {
+internal fun openPermissionSettings(context: Context, permissionName: String) {
     val intent = getPermissionIntent(context, permissionName)
     if (intent != null) {
         try {
@@ -463,7 +374,7 @@ private fun openSettings(context: Context, permissionName: String) {
     fallbackToAppSettings(context)
 }
 
-private fun fallbackToAppSettings(context: Context) {
+internal fun fallbackToAppSettings(context: Context) {
     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
         data = Uri.fromParts("package", context.packageName, null)
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -475,22 +386,22 @@ private fun fallbackToAppSettings(context: Context) {
     }
 }
 
-private fun getPermissionIntent(context: Context, permissionName: String): Intent? {
+internal fun getPermissionIntent(context: Context, permissionName: String): Intent? {
     val intent: Intent? = when (permissionName) {
-        "无障碍服务" -> Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-        "使用情况访问" -> Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-        "摄像头" -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+        PermissionUiState.ACCESSIBILITY_NAME -> Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+        PermissionUiState.USAGE_STATS_NAME -> Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+        PermissionUiState.CAMERA_NAME -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             data = Uri.fromParts("package", context.packageName, null)
         }
-        "通知" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        PermissionUiState.NOTIFICATION_NAME -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
                 putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
             }
         } else null
-        "忽略电池优化" -> Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+        PermissionUiState.BATTERY_NAME -> Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
             data = Uri.fromParts("package", context.packageName, null)
         }
-        "悬浮窗" -> Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+        PermissionUiState.OVERLAY_NAME -> Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
             data = Uri.fromParts("package", context.packageName, null)
         }
         else -> null
