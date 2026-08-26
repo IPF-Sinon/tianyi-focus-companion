@@ -25,25 +25,15 @@ class PluginManager(private val context: Context) {
     companion object {
         private const val TAG = "PluginManager"
 
-        // 内置插件入口类列表
+        // 内置核心插件入口类列表（不可卸载）
         private val BUILTIN_PLUGINS = listOf(
             "top.funcun.companion.plugin.onboarding.OnboardingPlugin",
-            "top.funcun.companion.plugin.focus.FocusEnginePlugin",
             "top.funcun.companion.plugin.homehtml.HomeHtmlPlugin",
-            "top.funcun.companion.plugin.affection.AffectionPlugin",
-            "top.funcun.companion.plugin.character.TianyiCharacterPlugin",
-            "top.funcun.companion.plugin.voice.VoiceConversationPlugin",
-            "top.funcun.companion.plugin.patrol.PatrolVlmPlugin",
-            "top.funcun.companion.plugin.enforce.EnforceBlockPlugin",
-            "top.funcun.companion.plugin.enforce.lock.EnforceLockPlugin",
-            "top.funcun.companion.plugin.honor.HonorPlugin",
             "top.funcun.companion.plugin.stats.StatisticsPlugin",
-            "top.funcun.companion.plugin.soundscape.SoundscapePlugin",
-            "top.funcun.companion.plugin.peace.PeaceZonePlugin",
-            "top.funcun.companion.plugin.notification.NotificationPlugin",
-            "top.funcun.companion.plugin.account.AccountPlugin",
-            "top.funcun.companion.plugin.market.PluginMarketPlugin",
         )
+
+        /** 插件注册表文件名（记录已安装插件，供主题读取） */
+        const val PLUGIN_REGISTRY_FILE = "plugins.json"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -61,6 +51,9 @@ class PluginManager(private val context: Context) {
     /** 初始化：加载内置插件 */
     fun initialize() {
         Log.i(TAG, "PluginManager initializing...")
+
+        // 先注册主题宿主服务，确保主题插件 onLoad 时能取到
+        registerThemeHostService()
 
         BUILTIN_PLUGINS.forEach { className ->
             runCatching {
@@ -86,6 +79,8 @@ class PluginManager(private val context: Context) {
         }
 
         Log.i(TAG, "PluginManager initialized. Loaded ${plugins.size} plugins.")
+        // 写入插件注册表，供主题读取
+        writeRegistry()
     }
 
     private fun createPluginContext(pluginId: PluginId): PluginContext {
@@ -158,6 +153,13 @@ class PluginManager(private val context: Context) {
     /** 获取指定插槽的所有 UI 组件 */
     fun getSlotContents(slot: top.funcun.companion.sdk.slot.UISlot): List<@Composable () -> Unit> {
         return slotContents[slot] ?: emptyList()
+    }
+
+    /** 注册主题宿主服务，供主题插件通过 SDK 服务机制获取 */
+    fun registerThemeHostService() {
+        val impl = ThemeHostServiceImpl(context, this)
+        services[top.funcun.companion.sdk.ThemeHostServiceToken.name] = impl
+        Log.i(TAG, "ThemeHostService registered")
     }
 
     /** 加载一个外部插件包 */
@@ -235,9 +237,13 @@ class PluginManager(private val context: Context) {
         val description: String,
         val version: String,
         val enabled: Boolean,
+        val builtin: Boolean = false,
+        val icon: String = "🧩",
+        val hasConfig: Boolean = false,
+        val actions: List<top.funcun.companion.sdk.PluginAction> = emptyList(),
     )
 
-    /** 获取内置插件展示信息（供插件页 UI 使用） */
+    /** 获取插件展示信息（供主题 Bridge 使用） */
     fun getBuiltinPluginInfo(): List<PluginInfo> =
         plugins.map { (id, plugin) ->
             PluginInfo(
@@ -246,8 +252,84 @@ class PluginManager(private val context: Context) {
                 description = plugin.description,
                 version = plugin.version.toString(),
                 enabled = pluginStates[id] == PluginState.ENABLED,
+                builtin = plugin.builtin,
+                icon = plugin.iconEmoji,
+                hasConfig = plugin.configSchema != null,
+                actions = plugin.actions,
             )
         }
+
+    /** 聚合所有插件贡献的导航项（按 order 排序） */
+    fun getNavItems(): List<top.funcun.companion.sdk.NavItem> =
+        plugins.flatMap { (id, plugin) ->
+            plugin.navItems.map { it.copy(pluginId = id.value) }
+        }.sortedBy { it.order }
+
+    /** 获取指定插件的配置 Schema */
+    fun getConfigSchema(pluginId: String): top.funcun.companion.sdk.ConfigSchema? =
+        plugins.entries.firstOrNull { it.key.value == pluginId }?.value?.configSchema
+
+    /** 读取指定插件某个配置项的当前值（字符串形式） */
+    fun readConfigValue(pluginId: String, key: String, defaultValue: String): String {
+        val prefs = context.getSharedPreferences("plugin_$pluginId", Context.MODE_PRIVATE)
+        return prefs.getString(key, defaultValue) ?: defaultValue
+    }
+
+    /** 写入指定插件某个配置项 */
+    fun writeConfigValue(pluginId: String, key: String, value: String) {
+        val prefs = context.getSharedPreferences("plugin_$pluginId", Context.MODE_PRIVATE)
+        prefs.edit().putString(key, value).apply()
+    }
+
+    /** 触发插件自定义动作 */
+    suspend fun invokeAction(pluginId: String, actionId: String): String? {
+        val plugin = plugins.entries.firstOrNull { it.key.value == pluginId }?.value ?: return null
+        return runCatching { plugin.onAction(actionId) }.getOrNull()
+    }
+
+    /** 请求插件提供导航页数据 */
+    suspend fun requestNavData(pluginId: String, navId: String): String? {
+        val plugin = plugins.entries.firstOrNull { it.key.value == pluginId }?.value ?: return null
+        return runCatching { plugin.getNavData(navId) }.getOrNull()
+    }
+
+    /** 卸载插件（内置插件拒绝卸载） */
+    suspend fun uninstall(pluginId: String): Result<Unit> = runCatching {
+        val entry = plugins.entries.firstOrNull { it.key.value == pluginId }
+            ?: error("Plugin not found: $pluginId")
+        require(!entry.value.builtin) { "内置插件不可卸载: $pluginId" }
+        unloadPlugin(entry.key).getOrThrow()
+        writeRegistry()
+    }
+
+    /**
+     * 把当前插件列表写入注册表文件（外部文件目录 plugins.json），
+     * 供主题（WebView）通过 file:// 或 Bridge 读取。
+     */
+    fun writeRegistry() {
+        runCatching {
+            val json = buildString {
+                append("{\"plugins\":[")
+                getBuiltinPluginInfo().forEachIndexed { index, info ->
+                    if (index > 0) append(",")
+                    append("{")
+                    append("\"id\":\"${info.id}\",")
+                    append("\"name\":\"${info.name}\",")
+                    append("\"description\":\"${info.description}\",")
+                    append("\"version\":\"${info.version}\",")
+                    append("\"enabled\":${info.enabled},")
+                    append("\"builtin\":${info.builtin},")
+                    append("\"icon\":\"${info.icon}\",")
+                    append("\"hasConfig\":${info.hasConfig}")
+                    append("}")
+                }
+                append("]}")
+            }
+            val file = File(context.getExternalFilesDir(null), PLUGIN_REGISTRY_FILE)
+            file.writeText(json)
+            Log.i(TAG, "Plugin registry written: ${file.absolutePath}")
+        }.onFailure { Log.w(TAG, "Failed to write plugin registry", it) }
+    }
 
     /** 异步关闭所有插件 */
     suspend fun shutdown() {

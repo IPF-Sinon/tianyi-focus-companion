@@ -23,7 +23,6 @@ android {
 
 dependencies {
     implementation(project(":plugin-sdk"))
-    implementation(project(":plugins:focus-engine"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

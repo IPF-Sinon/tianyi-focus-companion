@@ -4,64 +4,66 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import android.webkit.JavascriptInterface
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import top.funcun.companion.plugin.focus.FocusService
-import top.funcun.companion.plugin.focus.FocusServiceToken
-import top.funcun.companion.plugin.focus.FocusState
 import top.funcun.companion.sdk.Plugin
 import top.funcun.companion.sdk.PluginContext
+import top.funcun.companion.sdk.ThemeHostService
+import top.funcun.companion.sdk.ThemeHostServiceToken
 import top.funcun.companion.sdk.slot.UISlot
 import top.funcun.companion.sdk.util.PluginId
 import top.funcun.companion.sdk.util.SemVer
+import java.io.File
 
 /**
- * HTML 主界面插件。
+ * 主题插件（WebView 主界面）。
  *
- * 通过 WebView 渲染 HTML 文件作为主界面。HTML 中的特定标识（data-tianyi-*）
- * 会由 JS 桥接层绑定到真实功能（开始专注/停止专注等）。
+ * 用 WebView 渲染一个「主题包」接管应用全部界面：底栏、专注页、统计页、
+ * 插件页、设置页都由主题的 HTML/CSS/JS 决定。
  *
- * HTML 来源（优先级从高到低）：
- * 1. [HOME_HTML_FILENAME]（应用外部文件目录，用户可自定义）
- * 2. assets 内置默认 home.html
+ * 主题包目录（优先级从高到低）：
+ * 1. `外部文件目录/themes/current/`（用户自定义主题包，含 index.html）
+ * 2. `assets/theme/index.html`（内置默认主题）
+ *
+ * 主题通过注入的 `TianyiHost` JS 对象访问宿主能力（插件列表、导航项、
+ * 配置读写、卸载、插件动作、统计数据等）。
  */
 class HomeHtmlPlugin : Plugin {
 
     override val id = PluginId("top.funcun.companion.plugin.homehtml")
-    override val name = "HTML 主界面"
+    override val name = "主题（HTML 主界面）"
     override val version = SemVer(1, 0, 0)
-    override val description = "WebView 渲染 HTML 主界面，支持自定义"
+    override val description = "用 HTML 主题包接管全部界面，支持第三方主题"
     override val icon = 0
     override val dependencies = emptyList<PluginId>()
     override val permissions = emptyList<String>()
 
+    override val builtin = true
+    override val iconEmoji = "🌐"
+
     private lateinit var ctx: PluginContext
-    private var focusService: FocusService? = null
+    private var themeHost: ThemeHostService? = null
 
     override suspend fun onLoad(context: PluginContext) {
         ctx = context
-        Log.i(TAG, "HomeHtmlPlugin loaded")
+        themeHost = context.getService(ThemeHostServiceToken)
+        Log.i(TAG, "HomeHtmlPlugin loaded (themeHost=${themeHost != null})")
     }
 
     override suspend fun onEnable() {
-        focusService = ctx.getService(FocusServiceToken)
-        if (focusService == null) {
-            Log.w(TAG, "FocusService not found (focus-engine not loaded?)")
-        }
+        // 注册为全屏主界面：宿主把 HOME_TOP 内容全屏渲染
         ctx.registerUI(UISlot.HOME_TOP) {
-            HomeHtmlView(
+            ThemeWebView(
                 hostContext = ctx.getHostContext(),
-                focusService = focusService,
+                themeHost = themeHost,
             )
         }
     }
@@ -72,160 +74,140 @@ class HomeHtmlPlugin : Plugin {
     companion object {
         private const val TAG = "HomeHtmlPlugin"
 
-        /** 用户可自定义的主界面 HTML 文件名（放在应用外部文件目录） */
-        private const val HOME_HTML_FILENAME = "home.html"
+        /** 用户自定义主题包目录（相对外部文件目录） */
+        const val USER_THEME_DIR = "themes/current"
     }
 }
 
 /**
- * 读取主界面 HTML：
- * 优先外部文件目录的用户自定义文件，否则回退到 assets 内置。
+ * 解析主题包根路径。
+ * 用户主题存在则返回其目录，否则返回 null（使用内置 assets 主题）。
  */
-private fun loadHomeHtml(context: Context): String {
-    // 1. 用户自定义文件（应用外部文件目录，adb/文件管理器可访问）
-    val userFile = java.io.File(context.getExternalFilesDir(null), "home.html")
-    if (userFile.exists()) {
-        return userFile.readText()
-    }
-
-    // 2. assets 内置默认
-    return try {
-        context.assets.open("home.html").bufferedReader().use { it.readText() }
-    } catch (e: Exception) {
-        Log.e("HomeHtmlPlugin", "Failed to load assets home.html", e)
-        DEFAULT_HOME_HTML
-    }
+internal fun resolveUserThemeDir(context: Context): File? {
+    val dir = File(context.getExternalFilesDir(null), HomeHtmlPlugin.USER_THEME_DIR)
+    val index = File(dir, "index.html")
+    return if (index.exists()) dir else null
 }
 
-private const val DEFAULT_HOME_HTML = """
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>依见钟勤</title>
-<style>
-  :root { --primary: #4A90E2; --bg: #EEF3FA; --card: #FFFFFF; --text: #0B1A33; --sub: #6B7A93; }
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 20px 16px; }
-  .card { background: var(--card); border-radius: 24px; padding: 20px; margin-bottom: 16px; box-shadow: 0 8px 24px rgba(74,144,226,.08); }
-  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
-  .sub { color: var(--sub); font-size: 13px; }
-  button.primary { width: 100%; padding: 16px; border: none; border-radius: 24px;
-    background: linear-gradient(135deg, #66CCFF, #4A90E2); color: #fff; font-size: 17px; font-weight: 600;
-    margin-top: 12px; cursor: pointer; }
-  .timer { text-align: center; font-size: 48px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 8px 0; }
-  .row { display: flex; gap: 10px; }
-  .row button { flex: 1; padding: 14px; border: none; border-radius: 16px; font-size: 15px; font-weight: 500; cursor: pointer; }
-  .chip { display: inline-block; padding: 4px 12px; border-radius: 30px; background: #F0F7FF; color: var(--primary); font-size: 12px; font-weight: 500; }
-</style>
-</head>
-<body>
-  <div class="card">
-    <h1>依见钟勤</h1>
-    <p class="sub">遇见天依之后，对学习一见钟情</p>
-  </div>
-
-  <div class="card">
-    <div class="row" style="margin-bottom: 12px;">
-      <span class="chip">专注</span>
-    </div>
-    <div class="timer" id="timer">00:00</div>
-    <button class="primary" data-tianyi-action="focus-start" data-tianyi-minutes="25">开始专注 25 分钟</button>
-    <button class="primary" data-tianyi-action="focus-stop" style="background: #E05555; display:none;" id="stopBtn">结束专注</button>
-  </div>
-
-  <script>
-    // 由 Android 注入：window.TianyiBridge
-    function bindActions() {
-      document.querySelectorAll('[data-tianyi-action]').forEach(function (el) {
-        el.addEventListener('click', function () {
-          var action = el.getAttribute('data-tianyi-action');
-          if (!window.TianyiBridge) return;
-          if (action === 'focus-start') {
-            var minutes = parseInt(el.getAttribute('data-tianyi-minutes') || '25', 10);
-            window.TianyiBridge.startFocus(minutes);
-          } else if (action === 'focus-stop') {
-            window.TianyiBridge.stopFocus();
-          }
-        });
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', bindActions);
-  </script>
-</body>
-</html>
-"""
-
 /**
- * WebView 渲染 HTML 主界面，并注入 JS bridge 对接真实功能。
+ * 主题 WebView：渲染主题包并注入 TianyiHost JS 接口。
  */
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun HomeHtmlView(
+fun ThemeWebView(
     hostContext: Context,
-    focusService: FocusService?,
+    themeHost: ThemeHostService?,
     modifier: Modifier = Modifier,
 ) {
-    var webView: WebView? = null
-    val bridgeScope = remember { CoroutineScope(Dispatchers.Main) }
+    val userThemeDir = remember { resolveUserThemeDir(hostContext) }
 
     DisposableEffect(Unit) {
-        val subscription = focusService?.state?.let { flow ->
-            bridgeScope.launch {
-                flow.collectLatest { state ->
-                    webView?.post {
-                        webView?.evaluateJavascript(
-                            "window.onTianyiFocusState && window.onTianyiFocusState('${state.name}')",
-                            null,
-                        )
-                    }
-                }
-            }
-        }
-        onDispose {
-            subscription?.cancel()
-            webView?.destroy()
-        }
+        onDispose { }
     }
 
     AndroidView(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         factory = { ctx ->
             WebView(ctx).apply {
-                webView = this
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
-                webViewClient = WebViewClient()
+                settings.allowFileAccess = true
+                settings.allowContentAccess = true
 
                 addJavascriptInterface(
-                    object {
-                        @JavascriptInterface
-                        fun startFocus(minutes: Int) {
-                            bridgeScope.launch {
-                                focusService?.start(minutes)
-                            }
-                        }
-
-                        @JavascriptInterface
-                        fun stopFocus() {
-                            bridgeScope.launch {
-                                focusService?.stop()
-                            }
-                        }
-                    },
-                    "TianyiBridge",
+                    TianyiHostBridge(themeHost),
+                    "TianyiHost",
                 )
 
-                loadDataWithBaseURL(
-                    "file:///android_asset/",
-                    loadHomeHtml(ctx),
-                    "text/html",
-                    "UTF-8",
-                    null,
-                )
+                webViewClient = if (userThemeDir != null) {
+                    // 用户主题：从外部目录读文件
+                    UserThemeWebViewClient(userThemeDir)
+                } else {
+                    WebViewClient()
+                }
+
+                if (userThemeDir != null) {
+                    loadUrl("https://theme.local/index.html")
+                } else {
+                    loadUrl("file:///android_asset/theme/index.html")
+                }
             }
         },
     )
+}
+
+/**
+ * 用户主题 WebViewClient：把 https://theme.local/* 映射到外部主题目录文件。
+ * 使用虚拟 https 域名以便 JS 正常工作（file:// 存在同源限制）。
+ */
+private class UserThemeWebViewClient(private val themeDir: File) : WebViewClient() {
+
+    override fun shouldInterceptRequest(
+        view: WebView?,
+        request: WebResourceRequest?,
+    ): WebResourceResponse? {
+        val url = request?.url ?: return null
+        if (url.host != "theme.local") return null
+
+        val relative = url.path?.trimStart('/')?.ifEmpty { "index.html" } ?: "index.html"
+        val file = File(themeDir, relative)
+        if (!file.exists() || !file.canonicalPath.startsWith(themeDir.canonicalPath)) {
+            return null
+        }
+
+        val mime = when (file.extension.lowercase()) {
+            "html", "htm" -> "text/html"
+            "css" -> "text/css"
+            "js" -> "application/javascript"
+            "json" -> "application/json"
+            "png" -> "image/png"
+            "jpg", "jpeg" -> "image/jpeg"
+            "svg" -> "image/svg+xml"
+            "woff", "woff2" -> "font/woff2"
+            else -> "application/octet-stream"
+        }
+        return WebResourceResponse(mime, "UTF-8", file.inputStream())
+    }
+}
+
+/**
+ * 注入到主题的 JS 接口：window.TianyiHost。
+ *
+ * 所有方法返回 JSON 字符串，主题用 JSON.parse 解析。
+ */
+private class TianyiHostBridge(private val host: ThemeHostService?) {
+
+    @JavascriptInterface
+    fun getPlugins(): String = host?.getPluginsJson() ?: """{"plugins":[]}"""
+
+    @JavascriptInterface
+    fun getNavItems(): String = host?.getNavItemsJson() ?: """{"items":[]}"""
+
+    @JavascriptInterface
+    fun getConfigSchema(pluginId: String): String =
+        host?.getConfigSchemaJson(pluginId) ?: "null"
+
+    @JavascriptInterface
+    fun readConfig(pluginId: String, key: String, defaultValue: String): String =
+        host?.readConfig(pluginId, key, defaultValue) ?: defaultValue
+
+    @JavascriptInterface
+    fun writeConfig(pluginId: String, key: String, value: String) {
+        host?.writeConfig(pluginId, key, value)
+    }
+
+    @JavascriptInterface
+    fun uninstallPlugin(pluginId: String): Boolean =
+        host?.uninstallPlugin(pluginId) ?: false
+
+    @JavascriptInterface
+    fun invokeAction(pluginId: String, actionId: String): String =
+        host?.invokeAction(pluginId, actionId) ?: "null"
+
+    @JavascriptInterface
+    fun requestNavData(pluginId: String, navId: String): String =
+        host?.requestNavData(pluginId, navId) ?: "null"
+
+    @JavascriptInterface
+    fun getAppInfo(): String = host?.getAppInfoJson() ?: """{"appName":"依见钟勤"}"""
 }

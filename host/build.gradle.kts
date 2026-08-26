@@ -42,23 +42,9 @@ dependencies {
     implementation(project(":plugin-sdk"))
 
     // 内置官方插件
-    implementation(project(":plugins:example-hello"))
     implementation(project(":plugins:onboarding"))
-    implementation(project(":plugins:focus-engine"))
     implementation(project(":plugins:home-html"))
-    implementation(project(":plugins:affection-system"))
-    implementation(project(":plugins:character-tianyi"))
-    implementation(project(":plugins:voice-conversation"))
-    implementation(project(":plugins:patrol-vlm"))
-    implementation(project(":plugins:enforce-block"))
-    implementation(project(":plugins:enforce-lock"))
-    implementation(project(":plugins:honor-system"))
     implementation(project(":plugins:statistics"))
-    implementation(project(":plugins:soundscape"))
-    implementation(project(":plugins:peace-zone"))
-    implementation(project(":plugins:notification"))
-    implementation(project(":plugins:account"))
-    implementation(project(":plugins:plugin-market"))
 
     // Compose
     implementation(platform(libs.compose.bom))

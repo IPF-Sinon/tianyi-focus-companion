@@ -27,8 +27,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import top.funcun.companion.sdk.Plugin
 import top.funcun.companion.sdk.PluginContext
-import top.funcun.companion.sdk.event.AppEvent
-import top.funcun.companion.sdk.event.ActionType
 import top.funcun.companion.sdk.slot.UISlot
 import top.funcun.companion.sdk.util.PluginId
 import top.funcun.companion.sdk.util.SemVer
@@ -67,16 +65,9 @@ class OnboardingPlugin : Plugin {
     }
 
     override suspend fun onEnable() {
-        // 全屏权限引导（首次启动，跳过/完成后不再显示）
-        ctx.registerUI(UISlot.HOME_TOP) {
-            PermissionScreen(
-                hostContext = ctx.getHostContext(),
-                onAllGranted = {
-                    ctx.eventBus.emit(AppEvent.CompanionAction(ActionType.SMILE))
-                },
-            )
-        }
-        // 设置页「权限管理」入口（始终显示，方便跳过用户重新授权）
+        // 权限引导不再注册到 HOME_TOP（主界面已由主题接管），
+        // 改为由 MainActivity 在加载主题前作为门禁直接调用 PermissionScreen。
+        // 保留设置区入口（供后续原生设置页/主题调用）。
         ctx.registerUI(UISlot.SETTINGS_SECTION) {
             PermissionSettingsSection(
                 hostContext = ctx.getHostContext(),
@@ -93,6 +84,18 @@ class OnboardingPlugin : Plugin {
         internal const val KEY_SHOW_PAGE = "show_page"
         internal const val ACCESSIBILITY_SERVICE_CLASS =
             "top.funcun.companion.plugin.enforce.FocusAccessibilityService"
+
+        /** 是否已完成权限引导（用于 MainActivity 门控） */
+        fun isOnboardingComplete(context: Context): Boolean {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            return !prefs.getBoolean(KEY_SHOW_PAGE, true)
+        }
+
+        /** 标记权限引导完成 */
+        fun markOnboardingComplete(context: Context) {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putBoolean(KEY_SHOW_PAGE, false).apply()
+        }
     }
 }
 
