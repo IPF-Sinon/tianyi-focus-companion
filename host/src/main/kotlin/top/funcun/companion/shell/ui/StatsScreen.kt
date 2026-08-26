@@ -162,6 +162,7 @@ private fun WeekBarChart() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     val barHeightFraction = value / maxValue
+                    val cornerRadiusPx = with(androidx.compose.ui.platform.LocalDensity.current) { 8.dp.toPx() }
                     Canvas(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -176,7 +177,7 @@ private fun WeekBarChart() {
                             ),
                             topLeft = Offset(x, size.height - barHeight),
                             size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
-                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx()),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx),
                         )
                     }
                     Spacer(Modifier.height(4.dp))
