@@ -94,11 +94,11 @@ fun AccessibilityWizardCard(
                     )
                     StepText(
                         number = "2",
-                        text = "在列表中找到「专注辅助」（FocusAccessibilityService）",
+                        text = "点击「已下载的应用」，找到「依见钟勤」",
                     )
                     StepText(
                         number = "3",
-                        text = "开启开关，返回本页面后会自动检测并刷新状态",
+                        text = "开启服务开关，返回本页面后会自动检测并刷新状态",
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(

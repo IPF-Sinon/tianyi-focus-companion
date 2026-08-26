@@ -12,8 +12,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.funcun.companion.sdk.slot.UISlot
-import top.funcun.companion.theme.TianyiColors
 
+/**
+ * 主页，FolkPatch 风格：
+ * - Material3 主题色（surfaceContainer 底色卡片）
+ * - RoundedCornerShape(24.dp) 大圆角按钮
+ * - 底部导航栏
+ */
 @Composable
 fun HomeScreen(
     onStartFocus: () -> Unit,
@@ -24,10 +29,9 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(TianyiColors.Background)
-            .padding(24.dp),
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
     ) {
         Spacer(modifier = Modifier.weight(1f))
 
@@ -35,36 +39,42 @@ fun HomeScreen(
         getSlotContents(UISlot.HOME_TOP).forEach { it() }
 
         // 标题区
-        Text(
-            text = "依见钟勤",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = TianyiColors.TextPrimary,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "遇见天依之后，对学习一见钟情",
-            fontSize = 14.sp,
-            color = TianyiColors.TextSecondary,
-            textAlign = TextAlign.Center,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                modifier = Modifier.padding(bottom = 12.dp),
+            ) {
+                Text(
+                    text = "依见钟勤",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+                )
+            }
+            Text(
+                text = "遇见天依之后，对学习一见钟情",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
 
         Spacer(modifier = Modifier.weight(1f))
 
         // 好感度/荣誉卡片区（插件注册到 HOME_CARD）
         getSlotContents(UISlot.HOME_CARD).forEach { it() }
 
-        // 开始按钮
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 开始专注按钮
         Button(
             onClick = onStartFocus,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             shape = RoundedCornerShape(24.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = TianyiColors.Primary,
-                contentColor = TianyiColors.TextPrimary,
-            ),
         ) {
             Text(
                 text = "开始专注",
@@ -76,18 +86,37 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // 底部导航
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
         ) {
-            TextButton(onClick = onStats) {
-                Text("统计", color = TianyiColors.TextSecondary)
-            }
-            TextButton(onClick = onSettings) {
-                Text("设置", color = TianyiColors.TextSecondary)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                NavigationTextButton("统计", onClick = onStats)
+                NavigationTextButton("设置", onClick = onSettings)
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun NavigationTextButton(text: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

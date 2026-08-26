@@ -1,5 +1,6 @@
 package top.funcun.companion.shell
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -27,6 +28,11 @@ fun UIShell() {
 
     fun getSlotContents(slot: UISlot): List<@Composable () -> Unit> =
         pluginManager.getSlotContents(slot)
+
+    // 系统返回键导航：非主页 → 返回主页；主页 → 退出
+    BackHandler(enabled = currentScreen != Screen.HOME) {
+        currentScreen = Screen.HOME
+    }
 
     // 监听专注完成/中止事件，自动返回首页
     LaunchedEffect(Unit) {

@@ -2,11 +2,13 @@ package top.funcun.companion.plugin.onboarding
 
 import android.Manifest
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.AppOpsManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.PowerManager
+import android.os.Process
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
 import androidx.core.content.ContextCompat
@@ -74,20 +76,22 @@ class PermissionViewModel : ViewModel() {
 
         s[PermissionUiState.USAGE_STATS_NAME] = if (Build.VERSION.SDK_INT >= 21) {
             try {
-                val usm = context.getSystemService(android.app.usage.UsageStatsManager::class.java)
-                if (usm == null) {
-                    false
-                } else {
-                    val now = System.currentTimeMillis()
-                    // 有权限时 queryUsageStats 不抛 SecurityException；无权限时抛异常
-                    @Suppress("UNUSED_EXPRESSION")
-                    usm.queryUsageStats(
-                        android.app.usage.UsageStatsManager.INTERVAL_DAILY,
-                        now - 24 * 60 * 60 * 1000,
-                        now
+                val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+                val mode = if (Build.VERSION.SDK_INT >= 29) {
+                    appOps.unsafeCheckOpNoThrow(
+                        AppOpsManager.OPSTR_GET_USAGE_STATS,
+                        Process.myUid(),
+                        context.packageName
                     )
-                    true
+                } else {
+                    @Suppress("DEPRECATION")
+                    appOps.checkOpNoThrow(
+                        AppOpsManager.OPSTR_GET_USAGE_STATS,
+                        Process.myUid(),
+                        context.packageName
+                    )
                 }
+                mode == AppOpsManager.MODE_ALLOWED
             } catch (_: Exception) {
                 false
             }
