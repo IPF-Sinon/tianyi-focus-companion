@@ -90,8 +90,8 @@ class OnboardingPlugin : Plugin {
 
     companion object {
         private const val TAG = "OnboardingPlugin"
-        private const val PREFS_NAME = "onboarding_prefs"
-        private const val KEY_SHOW_PAGE = "show_page"
+        internal const val PREFS_NAME = "onboarding_prefs"
+        internal const val KEY_SHOW_PAGE = "show_page"
         internal const val ACCESSIBILITY_SERVICE_CLASS =
             "top.funcun.companion.plugin.enforce.FocusAccessibilityService"
     }
