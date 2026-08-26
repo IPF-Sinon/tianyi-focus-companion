@@ -137,7 +137,7 @@ fun ThemeWebView(
 }
 
 /**
- * 用户主题 WebViewClient：把 https://theme.local/* 映射到外部主题目录文件。
+ * 用户主题 WebViewClient：把 https://theme.local/ 下的资源映射到外部主题目录文件。
  * 使用虚拟 https 域名以便 JS 正常工作（file:// 存在同源限制）。
  */
 private class UserThemeWebViewClient(private val themeDir: File) : WebViewClient() {
