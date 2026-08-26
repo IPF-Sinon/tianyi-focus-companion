@@ -1,15 +1,25 @@
 package top.funcun.companion.shell.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -88,7 +98,7 @@ fun TimerCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Surface(
-                    shape = MaterialTheme.shapes.full,
+                    shape = RoundedCornerShape(percent = 50),
                     color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
                     Text(
@@ -109,7 +119,7 @@ fun TimerCard(
                     size = 180.dp,
                     strokeWidth = 6.dp,
                 )
-                Row(verticalAlignment = Alignment.Baseline) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = minutes.toString().padStart(2, '0'),
                         fontSize = 60.sp,
@@ -150,25 +160,27 @@ fun TimerCard(
                     )
                 }
                 Spacer(Modifier.width(16.dp))
-                // 主按钮：暂停/继续
-                Surface(
-                    shape = CircleShape,
-                    color = Brush.linearGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
-                        )
-                    ),
-                    modifier = Modifier.size(60.dp),
+                // 主按钮：暂停/继续（Surface 不支持 Brush color，改用 Box + background）
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = if (isRunning) Icons.Filled.Pause else Icons.Filled.Replay,
-                            contentDescription = if (isRunning) "暂停" else "继续",
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp),
-                        )
-                    }
+                    Icon(
+                        imageVector = if (isRunning) Icons.Filled.Pause else Icons.Filled.Replay,
+                        contentDescription = if (isRunning) "暂停" else "继续",
+                        tint = Color.White,
+                        modifier = Modifier.size(28.dp),
+                    )
                 }
                 Spacer(Modifier.width(16.dp))
                 IconButton(

@@ -1,12 +1,19 @@
 package top.funcun.companion.shell.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -93,7 +100,7 @@ fun CompanionHeader(
                 )
                 Spacer(Modifier.width(6.dp))
                 Surface(
-                    shape = MaterialTheme.shapes.full,
+                    shape = RoundedCornerShape(percent = 50),
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                 ) {
                     Text(
@@ -109,7 +116,7 @@ fun CompanionHeader(
 
         // 档案按钮
         Surface(
-            shape = MaterialTheme.shapes.full,
+            shape = RoundedCornerShape(percent = 50),
             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
             onClick = onProfileClick,
         ) {
@@ -135,7 +142,7 @@ fun SpeechBubble(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        shape = MaterialTheme.shapes.bubble,
+        shape = RoundedCornerShape(20.dp, 20.dp, 20.dp, 4.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = modifier,
     ) {

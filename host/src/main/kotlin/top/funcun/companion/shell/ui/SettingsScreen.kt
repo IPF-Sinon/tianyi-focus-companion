@@ -1,6 +1,7 @@
 package top.funcun.companion.shell.ui
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.HorizontalDivider
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -56,7 +58,7 @@ fun SettingsScreen(
                 subtitle = "25 分钟",
                 onClick = {},
             )
-            androidx.compose.foundation.layout.HorizontalDivider(
+            HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
             )
@@ -80,7 +82,7 @@ fun SettingsScreen(
                 subtitle = "抖音, 微信, 游戏",
                 onClick = {},
             )
-            androidx.compose.foundation.layout.HorizontalDivider(
+            HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
             )
@@ -104,7 +106,7 @@ fun SettingsScreen(
                 subtitle = "依见钟勤 v0.1.0",
                 onClick = {},
             )
-            androidx.compose.foundation.layout.HorizontalDivider(
+            HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
             )
