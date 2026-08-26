@@ -36,3 +36,31 @@ object TianyiColors {
     val AffectionCold = Color(0xFF6E8BB8)       // 冷淡
     val AffectionHeartbroken = Color(0xFF4A4A4A) // 心碎
 }
+
+/**
+ * 依见钟勤暗色变体。
+ * 深底 + 提亮粉，用于 Material3 darkColorScheme。
+ */
+object TianyiDarkColors {
+    // 主色调（暗色下提亮）
+    val Primary = Color(0xFFE5A9C4)        // 天依粉（亮）
+    val PrimaryLight = Color(0xFF8E4A6E)   // 中粉
+    val PrimaryDark = Color(0xFFF5D3E2)    // 亮粉
+
+    // 背景
+    val Background = Color(0xFF171417)     // 深暖灰
+    val Surface = Color(0xFF211D21)        // 深卡片
+
+    // 文字
+    val TextPrimary = Color(0xFFECEAEC)    // 近白
+    val TextSecondary = Color(0xFF9A949A)  // 灰辅助
+    val TextOnPrimary = Color(0xFF3A1426)  // 粉色底上的深字
+
+    // 分割线
+    val Divider = Color(0xFF2E2A2E)        // 深分割
+
+    // 状态色
+    val Error = Color(0xFFFF8A80)          // 亮红
+    val Success = Color(0xFF85C985)        // 亮绿
+    val Warning = Color(0xFFFFC968)        // 亮黄
+}
