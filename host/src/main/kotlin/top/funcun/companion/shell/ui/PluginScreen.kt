@@ -1,3 +1,5 @@
+package top.funcun.companion.shell.ui
+
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
