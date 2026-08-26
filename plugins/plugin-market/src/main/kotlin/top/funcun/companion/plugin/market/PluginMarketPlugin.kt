@@ -5,11 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import top.funcun.companion.sdk.Plugin
 import top.funcun.companion.sdk.PluginContext
 import top.funcun.companion.sdk.slot.UISlot
@@ -70,55 +69,65 @@ fun PluginMarketSection() {
         )
     }
 
-    Column(modifier = Modifier.padding(16.dp)) {
+    // FolkPatch 风格：标题 + surfaceContainer 大圆角卡片，行内分隔
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text(
             text = "插件市场",
-            fontSize = 18.sp,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
         )
-        Spacer(modifier = Modifier.height(12.dp))
 
-        plugins.forEach { plugin ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = plugin.name,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Text(
-                            text = plugin.description,
-                            fontSize = 12.sp,
-                            color = Color(0xFF8A8A8A),
-                        )
-                        Text(
-                            text = "${plugin.author} · v${plugin.version}",
-                            fontSize = 10.sp,
-                            color = Color(0xFFB0B0B0),
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+        ) {
+            Column {
+                plugins.forEachIndexed { index, plugin ->
+                    if (index > 0) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
                         )
                     }
-                    FilledTonalButton(
-                        onClick = {
-                            // 下载并安装插件
-                            Log.i("PluginMarket", "Installing plugin: ${plugin.id}")
-                        },
-                        shape = RoundedCornerShape(24.dp),
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            if (plugin.isInstalled) "已安装" else "安装",
-                            fontSize = 12.sp,
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = plugin.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                text = plugin.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = "${plugin.author} · v${plugin.version}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.outline,
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        FilledTonalButton(
+                            onClick = {
+                                // 下载并安装插件
+                                Log.i("PluginMarket", "Installing plugin: ${plugin.id}")
+                            },
+                            shape = RoundedCornerShape(16.dp),
+                        ) {
+                            Text(if (plugin.isInstalled) "已安装" else "安装")
+                        }
                     }
                 }
             }

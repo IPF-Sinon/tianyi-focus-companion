@@ -61,20 +61,27 @@ fun FocusChart() {
     val data = listOf(25f, 45f, 30f, 60f, 20f, 50f, 35f)
     val labels = listOf("一", "二", "三", "四", "五", "六", "日")
 
+    // FolkPatch 风格：surfaceContainer 大圆角卡片
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        shape = RoundedCornerShape(16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "本周专注",
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(16.dp))
 
+            // 在 Composable 作用域捕获主题色（Canvas draw 内不可直接访问 MaterialTheme）
+            val barColor = MaterialTheme.colorScheme.primary
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -89,7 +96,7 @@ fun FocusChart() {
                     val x = index * barSpacing + barSpacing / 2f - barWidth / 2f
 
                     drawRect(
-                        color = Color(0xFFE8A0BF),
+                        color = barColor,
                         topLeft = Offset(x, size.height - barHeight),
                         size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
                     )
@@ -105,7 +112,10 @@ fun StatsCard() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
     ) {
         Row(
             modifier = Modifier
@@ -125,14 +135,14 @@ private fun StatItem(label: String, value: String) {
     Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
         Text(
             text = value,
-            fontSize = 18.sp,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFFE8A0BF),
+            color = MaterialTheme.colorScheme.primary,
         )
         Text(
             text = label,
-            fontSize = 12.sp,
-            color = Color(0xFF8A8A8A),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

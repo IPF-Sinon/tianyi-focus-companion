@@ -183,16 +183,11 @@ private fun PermissionList(
     uiState: PermissionUiState,
     onClick: (String) -> Unit,
     onOpenAccessibilitySettings: () -> Unit,
+    flat: Boolean = false,
 ) {
     var wizardExpanded by remember { mutableStateOf(false) }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-    ) {
+    val content = @Composable {
         Column {
             uiState.entries.forEachIndexed { index, entry ->
                 if (index > 0) {
@@ -229,6 +224,20 @@ private fun PermissionList(
                     }
                 }
             }
+        }
+    }
+
+    if (flat) {
+        content()
+    } else {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+        ) {
+            content()
         }
     }
 }

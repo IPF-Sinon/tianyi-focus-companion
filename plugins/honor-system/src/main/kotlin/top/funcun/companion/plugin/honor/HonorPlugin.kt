@@ -86,12 +86,15 @@ class HonorEngine(private val eventBus: top.funcun.companion.sdk.event.EventBus)
 fun HonorCard(profile: StateFlow<HonorProfile>) {
     val p by profile.collectAsState()
 
+    // FolkPatch 风格：surfaceContainer 大圆角卡片
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5D0E0)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -104,20 +107,20 @@ fun HonorCard(profile: StateFlow<HonorProfile>) {
                 Column {
                     Text(
                         text = p.badgeLevel.label,
-                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFC47A9A),
+                        color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
                         text = "累计 ${p.totalMinutes} 分钟",
-                        fontSize = 12.sp,
-                        color = Color(0xFF8A8A8A),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Text(
                     text = "已完成 ${p.completedCount} 次",
-                    fontSize = 12.sp,
-                    color = Color(0xFF8A8A8A),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
