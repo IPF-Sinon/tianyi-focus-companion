@@ -15,7 +15,7 @@ camerax = "1.4.1"
 coroutines = "1.9.0"
 miuix = "0.9.4-rc01"
 ksp = "2.3.11"
-materialkolor = "2.0.0"
+materialkolor = "4.1.1"
 
 [libraries]
 # Miuix (HyperOS style)

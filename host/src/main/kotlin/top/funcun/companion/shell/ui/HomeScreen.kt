@@ -150,7 +150,7 @@ private fun BackgroundLayer() {
     ) {
         if (file != null) {
             androidx.compose.foundation.Image(
-                painter = coil.compose.rememberAsyncImagePainter(
+                painter = coil3.compose.rememberAsyncImagePainter(
                     model = file,
                 ),
                 contentDescription = null,

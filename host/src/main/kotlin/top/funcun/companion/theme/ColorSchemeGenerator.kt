@@ -21,6 +21,7 @@ object ColorSchemeGenerator {
         return dynamicColorScheme(
             seedColor = seed,
             isDark = isDark,
+            isAmoled = false,
             style = style,
         )
     }

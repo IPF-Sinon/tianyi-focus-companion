@@ -8,14 +8,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import top.funcun.companion.App
+import androidx.compose.ui.unit.sp
 import top.funcun.companion.theme.ThemeManager
 
 /**
@@ -42,6 +45,8 @@ private enum class SubPage { MAIN, THEME, STORE }
 
 @Composable
 private fun SettingsMain(onTheme: () -> Unit, onStore: () -> Unit) {
+    val appContext = LocalContext.current.applicationContext
+
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         item { Spacer(Modifier.height(8.dp)) }
         item {
@@ -63,8 +68,11 @@ private fun SettingsMain(onTheme: () -> Unit, onStore: () -> Unit) {
         item { Spacer(Modifier.height(16.dp)) }
         item { SettingsGroupCard {
             val cfg = ThemeManager.config
-            SettingsItem("🌙", "深色模式", if (cfg.nightModeFollowSys) "跟随系统" else if (cfg.nightModeEnabled) "开" else "关") {
-                ThemeManager.update(LocalContextCompat.currentApp()) { c ->
+            SettingsItem(
+                "🌙", "深色模式",
+                if (cfg.nightModeFollowSys) "跟随系统" else if (cfg.nightModeEnabled) "开" else "关",
+            ) {
+                ThemeManager.update(appContext) { c ->
                     c.copy(nightModeFollowSys = !c.nightModeFollowSys)
                 }
             }
@@ -98,24 +106,16 @@ private fun SettingsItem(icon: String, title: String, subtitle: String, onClick:
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(icon, fontSize = androidx.compose.ui.unit.sp(20))
+        Text(icon, fontSize = 20.sp)
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Icon(
-            imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-/** 便捷获取当前 application context */
-private object LocalContextCompat {
-    @Composable
-    fun currentApp(): android.content.Context {
-        return androidx.compose.ui.platform.LocalContext.current.applicationContext
     }
 }

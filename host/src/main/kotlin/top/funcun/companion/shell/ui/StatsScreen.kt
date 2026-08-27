@@ -128,6 +128,7 @@ private fun WeekBars(arr: org.json.JSONArray) {
         (0 until arr.length()).map { arr.getJSONObject(it).optInt("minutes", 0) }
     }
     val max = values.maxOrNull() ?: 1
+    val primary = MaterialTheme.colorScheme.primary
 
     Row(
         modifier = Modifier.fillMaxWidth().height(120.dp),
@@ -147,8 +148,8 @@ private fun WeekBars(arr: org.json.JSONArray) {
                     drawRoundRect(
                         brush = Brush.verticalGradient(
                             listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                primary,
+                                primary.copy(alpha = 0.5f),
                             ),
                         ),
                         topLeft = Offset((cw - w) / 2, ch - h),

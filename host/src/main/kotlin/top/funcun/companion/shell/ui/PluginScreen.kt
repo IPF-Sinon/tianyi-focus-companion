@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import top.funcun.companion.sdk.ConfigField
 import top.funcun.companion.sdk.ConfigFieldType
@@ -52,7 +53,7 @@ fun PluginScreen(pluginManager: PluginManager) {
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = info.icon, fontSize = androidx.compose.ui.unit.sp(24))
+                        Text(text = info.icon, fontSize = 24.sp)
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -190,6 +191,7 @@ private fun ConfigForm(schema: ConfigSchema, pluginId: String, pluginManager: Pl
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ConfigFieldRow(field: ConfigField, pluginId: String, pluginManager: PluginManager) {
     val current = remember(field.key) {
