@@ -53,7 +53,8 @@ class ThemeImportActivity : ComponentActivity() {
                 while (entry != null) {
                     // 去掉可能存在的顶层文件夹（主题包通常包含 index.html 在根目录）
                     val name = entry.name.trimStart('/')
-                    val relative = name.substringAfterFirst('/').ifBlank { name }
+                    val slash = name.indexOf('/')
+                    val relative = if (slash >= 0) name.substring(slash + 1) else name
                     val dest = File(targetDir, relative)
 
                     if (entry.isDirectory) {
