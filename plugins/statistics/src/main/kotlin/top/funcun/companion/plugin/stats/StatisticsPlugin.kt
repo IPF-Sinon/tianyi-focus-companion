@@ -100,7 +100,7 @@ class StatisticsPlugin : Plugin {
     override suspend fun onUnload() {}
 
     /** 向主题提供统计数据（JSON） */
-    override suspend fun getNavData(navId: String): String? {
+    override fun getNavData(navId: String): String? {
         if (navId != "stats") return null
         return store.toJson()
     }
