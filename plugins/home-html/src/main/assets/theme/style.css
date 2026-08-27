@@ -222,3 +222,79 @@ body {
   font-size: 14px;
   padding: 40px 20px;
 }
+
+/* ── 分组标题 ─────────────────────────── */
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sub);
+  margin-bottom: 8px;
+}
+
+/* ── 品牌头像 ─────────────────────────── */
+.row-icon.brand {
+  background: linear-gradient(135deg, var(--primary-light), var(--primary));
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ── 配置区（展开/收起） ──────────────── */
+.config-area {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height .25s ease;
+}
+.config-area.open {
+  max-height: 2000px;
+  margin-top: 8px;
+  border-top: 1px solid var(--outline);
+  padding-top: 8px;
+}
+.config-section { margin-top: 10px; }
+.btn.active { background: var(--primary); color: #fff; }
+
+/* ── 统计单位 ─────────────────────────── */
+.stat-unit { font-size: 13px; color: var(--sub); font-weight: 400; margin-left: 2px; }
+
+/* ── Toast ────────────────────────────── */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--nav-h) + 24px);
+  transform: translateX(-50%);
+  background: rgba(11, 26, 51, .88);
+  color: #fff;
+  padding: 9px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+  max-width: 80%;
+  text-align: center;
+}
+.toast.show { opacity: 1; }
+
+/* ── 自绘对话框 ───────────────────────── */
+.dialog-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+.dialog {
+  background: var(--card);
+  border-radius: 24px;
+  padding: 22px;
+  width: 100%;
+  max-width: 320px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, .2);
+}
+.dialog-msg { font-size: 15px; line-height: 1.6; margin-bottom: 18px; }
+.dialog-actions { display: flex; gap: 10px; }
+.dialog-actions .btn { flex: 1; padding: 12px; font-size: 14px; }

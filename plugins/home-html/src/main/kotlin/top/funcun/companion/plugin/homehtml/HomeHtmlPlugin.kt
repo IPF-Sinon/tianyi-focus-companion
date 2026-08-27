@@ -11,7 +11,10 @@ import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import top.funcun.companion.sdk.Plugin
@@ -86,16 +89,6 @@ class HomeHtmlPlugin : Plugin {
 }
 
 /**
- * 解析主题包根路径。
- * 用户主题存在则返回其目录，否则返回 null（使用内置 assets 主题）。
- */
-internal fun resolveUserThemeDir(context: Context): File? {
-    val dir = File(context.getExternalFilesDir(null), HomeHtmlConstants.USER_THEME_DIR)
-    val index = File(dir, "index.html")
-    return if (index.exists()) dir else null
-}
-
-/**
  * 主题 WebView：渲染主题包并注入 TianyiHost JS 接口。
  */
 @SuppressLint("SetJavaScriptEnabled")
@@ -106,18 +99,24 @@ fun ThemeWebView(
     modifier: Modifier = Modifier,
 ) {
     var webViewRef: WebView? = null
+    // 记录上次加载时用户主题目录的指纹，只有变化才 reload（避免每次回前台丢失 Tab）
+    var lastFingerprint by remember { mutableStateOf(themeFingerprint(hostContext)) }
 
-    // 从主题导入界面返回时重载主题（重新解析用户主题目录）
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                webViewRef?.reload()
+                val current = themeFingerprint(hostContext)
+                if (current != lastFingerprint) {
+                    lastFingerprint = current
+                    webViewRef?.reload()
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            webViewRef?.let { ThemeBackBridge.detach(it) }
             webViewRef?.destroy()
         }
     }
@@ -127,38 +126,53 @@ fun ThemeWebView(
         factory = { ctx ->
             WebView(ctx).apply {
                 webViewRef = this
+                ThemeBackBridge.attach(this)
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
-                settings.allowFileAccess = true
-                settings.allowContentAccess = true
+                // 安全加固：统一通过拦截器供给资源，禁止直接 file 访问
+                settings.allowFileAccess = false
+                settings.allowContentAccess = false
+                @Suppress("DEPRECATION")
+                settings.allowFileAccessFromFileURLs = false
+                @Suppress("DEPRECATION")
+                settings.allowUniversalAccessFromFileURLs = false
+                settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
 
                 addJavascriptInterface(
                     TianyiHostBridge(themeHost),
                     "TianyiHost",
                 )
 
-                val userThemeDir = resolveUserThemeDir(ctx)
-                webViewClient = if (userThemeDir != null) {
-                    UserThemeWebViewClient(userThemeDir)
-                } else {
-                    WebViewClient()
-                }
+                // 承接 alert/confirm，否则主题里的确认框无效
+                webChromeClient = ThemeWebChromeClient(ctx)
 
-                if (userThemeDir != null) {
-                    loadUrl(HomeHtmlConstants.USER_THEME_BASE_URL)
-                } else {
-                    loadUrl("file:///android_asset/theme/index.html")
-                }
+                // 统一用虚拟域名加载：用户主题优先，缺失则回退 assets
+                webViewClient = ThemeWebViewClient(ctx)
+                loadUrl(HomeHtmlConstants.USER_THEME_BASE_URL)
             }
         },
     )
 }
 
+/** 用户主题目录指纹：文件数 + 最新修改时间 */
+private fun themeFingerprint(context: Context): String {
+    val dir = File(context.getExternalFilesDir(null), HomeHtmlConstants.USER_THEME_DIR)
+    if (!dir.exists()) return "builtin"
+    val files = dir.walkTopDown().filter { it.isFile }.toList()
+    val latest = files.maxOfOrNull { it.lastModified() } ?: 0L
+    return "user:${files.size}:$latest"
+}
+
 /**
- * 用户主题 WebViewClient：把 https://theme.local/ 下的资源映射到外部主题目录文件。
- * 使用虚拟 https 域名以便 JS 正常工作（file:// 存在同源限制）。
+ * 主题资源拦截器。
+ *
+ * 统一以 `https://theme.local/` 作为基地址：
+ * - 用户主题目录存在该文件 → 读外部文件
+ * - 否则回退读 APK assets 的内置主题
+ *
+ * 这样内置主题与用户主题的同源策略、相对路径行为完全一致。
  */
-private class UserThemeWebViewClient(private val themeDir: File) : WebViewClient() {
+private class ThemeWebViewClient(private val context: Context) : WebViewClient() {
 
     override fun shouldInterceptRequest(
         view: WebView?,
@@ -168,23 +182,75 @@ private class UserThemeWebViewClient(private val themeDir: File) : WebViewClient
         if (url.host != "theme.local") return null
 
         val relative = url.path?.trimStart('/')?.ifEmpty { "index.html" } ?: "index.html"
-        val file = File(themeDir, relative)
-        if (!file.exists() || !file.canonicalPath.startsWith(themeDir.canonicalPath)) {
-            return null
+        val mime = mimeOf(relative)
+
+        // 1. 用户主题目录
+        val userDir = File(context.getExternalFilesDir(null), HomeHtmlConstants.USER_THEME_DIR)
+        val userFile = File(userDir, relative)
+        if (userFile.exists() &&
+            userFile.canonicalPath.startsWith(userDir.canonicalPath)
+        ) {
+            return WebResourceResponse(mime, "UTF-8", userFile.inputStream())
         }
 
-        val mime = when (file.extension.lowercase()) {
-            "html", "htm" -> "text/html"
-            "css" -> "text/css"
-            "js" -> "application/javascript"
-            "json" -> "application/json"
-            "png" -> "image/png"
-            "jpg", "jpeg" -> "image/jpeg"
-            "svg" -> "image/svg+xml"
-            "woff", "woff2" -> "font/woff2"
-            else -> "application/octet-stream"
+        // 2. 回退内置 assets（theme/ 目录）
+        return try {
+            val stream = context.assets.open("theme/$relative")
+            WebResourceResponse(mime, "UTF-8", stream)
+        } catch (e: Exception) {
+            null
         }
-        return WebResourceResponse(mime, "UTF-8", file.inputStream())
+    }
+
+    private fun mimeOf(path: String): String = when (path.substringAfterLast('.', "").lowercase()) {
+        "html", "htm" -> "text/html"
+        "css" -> "text/css"
+        "js" -> "application/javascript"
+        "json" -> "application/json"
+        "png" -> "image/png"
+        "jpg", "jpeg" -> "image/jpeg"
+        "gif" -> "image/gif"
+        "svg" -> "image/svg+xml"
+        "woff" -> "font/woff"
+        "woff2" -> "font/woff2"
+        "ttf" -> "font/ttf"
+        else -> "application/octet-stream"
+    }
+}
+
+/**
+ * 承接主题内的 alert / confirm，用系统对话框呈现。
+ */
+private class ThemeWebChromeClient(private val context: Context) :
+    android.webkit.WebChromeClient() {
+
+    override fun onJsAlert(
+        view: WebView?,
+        url: String?,
+        message: String?,
+        result: android.webkit.JsResult?,
+    ): Boolean {
+        android.app.AlertDialog.Builder(context)
+            .setMessage(message ?: "")
+            .setPositiveButton("确定") { _, _ -> result?.confirm() }
+            .setOnCancelListener { result?.cancel() }
+            .show()
+        return true
+    }
+
+    override fun onJsConfirm(
+        view: WebView?,
+        url: String?,
+        message: String?,
+        result: android.webkit.JsResult?,
+    ): Boolean {
+        android.app.AlertDialog.Builder(context)
+            .setMessage(message ?: "")
+            .setPositiveButton("确定") { _, _ -> result?.confirm() }
+            .setNegativeButton("取消") { _, _ -> result?.cancel() }
+            .setOnCancelListener { result?.cancel() }
+            .show()
+        return true
     }
 }
 
@@ -241,4 +307,10 @@ private class TianyiHostBridge(private val host: ThemeHostService?) {
 
     @JavascriptInterface
     fun resetTheme(): Boolean = host?.resetTheme() ?: false
+
+    /** 主题日志（便于调试） */
+    @JavascriptInterface
+    fun log(message: String) {
+        Log.i("ThemeJS", message)
+    }
 }

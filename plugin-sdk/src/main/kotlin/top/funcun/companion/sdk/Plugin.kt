@@ -70,17 +70,23 @@ interface Plugin {
     /**
      * 主题请求某个导航页的数据时调用。
      *
+     * 该方法在 WebView 的 JS 线程同步调用，实现必须**快速返回**（读缓存/prefs），
+     * 耗时工作请在插件内部异步进行并缓存结果。
+     *
      * @param navId 对应 [navItems] 中声明的 id
      * @return JSON 字符串，结构由插件与主题约定
      */
-    suspend fun getNavData(navId: String): String? = null
+    fun getNavData(navId: String): String? = null
 
     /**
      * 处理主题触发的自定义动作。
+     *
+     * 同样在 JS 线程同步调用，需快速返回；重活请插件内部起协程处理。
+     *
      * @param actionId 对应 [actions] 中声明的 id
      * @return 可选返回值（JSON 字符串），主题可据此更新界面
      */
-    suspend fun onAction(actionId: String): String? = null
+    fun onAction(actionId: String): String? = null
 
     /**
      * 插件被加载时调用。

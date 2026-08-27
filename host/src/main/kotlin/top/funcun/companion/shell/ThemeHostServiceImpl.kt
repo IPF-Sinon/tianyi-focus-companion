@@ -77,19 +77,13 @@ class ThemeHostServiceImpl(
     }
 
     override fun uninstallPlugin(pluginId: String): Boolean =
-        kotlinx.coroutines.runBlocking {
-            pluginManager.uninstall(pluginId).isSuccess
-        }
+        pluginManager.uninstall(pluginId).isSuccess
 
     override fun invokeAction(pluginId: String, actionId: String): String? =
-        kotlinx.coroutines.runBlocking {
-            pluginManager.invokeAction(pluginId, actionId)
-        }
+        pluginManager.invokeAction(pluginId, actionId)
 
     override fun requestNavData(pluginId: String, navId: String): String? =
-        kotlinx.coroutines.runBlocking {
-            pluginManager.requestNavData(pluginId, navId)
-        }
+        pluginManager.requestNavData(pluginId, navId)
 
     override fun getAppInfoJson(): String {
         val pkg = context.packageName

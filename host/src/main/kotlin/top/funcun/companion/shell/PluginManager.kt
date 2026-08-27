@@ -281,24 +281,24 @@ class PluginManager(private val context: Context) {
         prefs.edit().putString(key, value).apply()
     }
 
-    /** 触发插件自定义动作 */
-    suspend fun invokeAction(pluginId: String, actionId: String): String? {
+    /** 触发插件自定义动作（同步，供 JS 桥接直接调用） */
+    fun invokeAction(pluginId: String, actionId: String): String? {
         val plugin = plugins.entries.firstOrNull { it.key.value == pluginId }?.value ?: return null
         return runCatching { plugin.onAction(actionId) }.getOrNull()
     }
 
-    /** 请求插件提供导航页数据 */
-    suspend fun requestNavData(pluginId: String, navId: String): String? {
+    /** 请求插件提供导航页数据（同步，供 JS 桥接直接调用） */
+    fun requestNavData(pluginId: String, navId: String): String? {
         val plugin = plugins.entries.firstOrNull { it.key.value == pluginId }?.value ?: return null
         return runCatching { plugin.getNavData(navId) }.getOrNull()
     }
 
     /** 卸载插件（内置插件拒绝卸载） */
-    suspend fun uninstall(pluginId: String): Result<Unit> = runCatching {
+    fun uninstall(pluginId: String): Result<Unit> = runCatching {
         val entry = plugins.entries.firstOrNull { it.key.value == pluginId }
             ?: error("Plugin not found: $pluginId")
         require(!entry.value.builtin) { "内置插件不可卸载: $pluginId" }
-        unloadPlugin(entry.key).getOrThrow()
+        runBlocking { unloadPlugin(entry.key).getOrThrow() }
         writeRegistry()
     }
 

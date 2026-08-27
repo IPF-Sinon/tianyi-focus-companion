@@ -25,7 +25,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import top.funcun.companion.sdk.NavItem
 import top.funcun.companion.sdk.Plugin
+import top.funcun.companion.sdk.PluginAction
 import top.funcun.companion.sdk.PluginContext
 import top.funcun.companion.sdk.slot.UISlot
 import top.funcun.companion.sdk.util.PluginId
@@ -57,6 +59,20 @@ class OnboardingPlugin : Plugin {
         Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
     )
 
+    /** 核心插件：权限引导不可卸载 */
+    override val builtin = true
+    override val iconEmoji = "🔔"
+
+    /** 贡献「权限」导航页，供主题渲染权限状态列表 */
+    override val navItems = listOf(
+        NavItem(id = "permissions", label = "权限", icon = "🔔", order = 30),
+    )
+
+    /** 声明动作：重新进入权限引导 */
+    override val actions = listOf(
+        PluginAction(id = "reopen_onboarding", label = "重新引导", icon = "🔄"),
+    )
+
     private lateinit var ctx: PluginContext
 
     override suspend fun onLoad(context: PluginContext) {
@@ -77,6 +93,32 @@ class OnboardingPlugin : Plugin {
 
     override suspend fun onDisable() {}
     override suspend fun onUnload() {}
+
+    /** 主题请求「权限」页数据：返回各权限当前状态 JSON */
+    override fun getNavData(navId: String): String? {
+        if (navId != "permissions") return null
+        val context = ctx.getHostContext()
+        val status = mutableMapOf<String, Boolean>()
+        context.checkPermissionsInto(status)
+
+        val entries = PermissionUiState.defaultEntries().joinToString(",") { entry ->
+            val granted = status[entry.name] == true
+            """{"name":"${entry.name}","icon":"${entry.icon}","level":"${entry.level.name}","hint":"${entry.level.hint}","granted":$granted}"""
+        }
+        val allGranted = status.values.all { it }
+        return """{"type":"permissions","allGranted":$allGranted,"items":[$entries]}"""
+    }
+
+    /** 主题触发动作 */
+    override fun onAction(actionId: String): String? = when (actionId) {
+        "reopen_onboarding" -> {
+            val context = ctx.getHostContext()
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putBoolean(KEY_SHOW_PAGE, true).apply()
+            """{"ok":true,"message":"下次启动将重新显示权限引导"}"""
+        }
+        else -> null
+    }
 
     companion object {
         private const val TAG = "OnboardingPlugin"
