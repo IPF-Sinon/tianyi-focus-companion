@@ -23,4 +23,3 @@ include(":plugin-sdk")
 // 官方插件
 include(":plugins:onboarding")
 include(":plugins:statistics")
-include(":plugins:home-html")

@@ -2,6 +2,7 @@ package top.funcun.companion
 
 import android.app.Application
 import top.funcun.companion.shell.PluginManager
+import top.funcun.companion.theme.ThemeManager
 import dagger.hilt.android.HiltAndroidApp
 
 /**
@@ -16,6 +17,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        ThemeManager.init(this)
         pluginManager = PluginManager(this)
         pluginManager.initialize()
     }

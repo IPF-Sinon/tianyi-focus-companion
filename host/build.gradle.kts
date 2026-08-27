@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
 }
@@ -43,7 +44,6 @@ dependencies {
 
     // 内置官方插件
     implementation(project(":plugins:onboarding"))
-    implementation(project(":plugins:home-html"))
     implementation(project(":plugins:statistics"))
 
     // Compose
@@ -96,4 +96,10 @@ dependencies {
     implementation(libs.miuix.ui)
     implementation(libs.miuix.preference)
     implementation(libs.miuix.icons)
+
+    // MaterialKolor（种子色生成 M3 配色）
+    implementation(libs.materialkolor)
+
+    // 序列化（主题 JSON）
+    implementation(libs.kotlinx.serialization.json)
 }

@@ -25,15 +25,14 @@ class PluginManager(private val context: Context) {
     companion object {
         private const val TAG = "PluginManager"
 
+        private const val UI_PREFS = "ui_override_prefs"
+        private const val KEY_ACTIVE_OVERRIDE = "active_ui_override_plugin_id"
+
         // 内置核心插件入口类列表（不可卸载）
         private val BUILTIN_PLUGINS = listOf(
             "top.funcun.companion.plugin.onboarding.OnboardingPlugin",
-            "top.funcun.companion.plugin.homehtml.HomeHtmlPlugin",
             "top.funcun.companion.plugin.stats.StatisticsPlugin",
         )
-
-        /** 插件注册表文件名（记录已安装插件，供主题读取） */
-        const val PLUGIN_REGISTRY_FILE = "plugins.json"
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -48,12 +47,15 @@ class PluginManager(private val context: Context) {
     /** 获取事件总线实例 */
     fun getEventBus(): EventBus = eventBus
 
+    /** 宿主 Context */
+    fun getHostContextCompat(): Context = context
+
+    /** 事件总线 + UiHostApi 暴露给 UI 覆写插件 */
+    val uiHostApi: top.funcun.companion.sdk.UiHostApi by lazy { UiHostApiImpl(this) }
+
     /** 初始化：加载内置插件 */
     fun initialize() {
         Log.i(TAG, "PluginManager initializing...")
-
-        // 先注册主题宿主服务，确保主题插件 onLoad 时能取到
-        registerThemeHostService()
 
         BUILTIN_PLUGINS.forEach { className ->
             runCatching {
@@ -79,8 +81,7 @@ class PluginManager(private val context: Context) {
         }
 
         Log.i(TAG, "PluginManager initialized. Loaded ${plugins.size} plugins.")
-        // 写入插件注册表，供主题读取
-        writeRegistry()
+        resolveActiveUiOverride()
     }
 
     private fun createPluginContext(pluginId: PluginId): PluginContext {
@@ -153,13 +154,6 @@ class PluginManager(private val context: Context) {
     /** 获取指定插槽的所有 UI 组件 */
     fun getSlotContents(slot: top.funcun.companion.sdk.slot.UISlot): List<@Composable () -> Unit> {
         return slotContents[slot] ?: emptyList()
-    }
-
-    /** 注册主题宿主服务，供主题插件通过 SDK 服务机制获取 */
-    fun registerThemeHostService() {
-        val impl = ThemeHostServiceImpl(context, this)
-        services[top.funcun.companion.sdk.ThemeHostServiceToken.name] = impl
-        Log.i(TAG, "ThemeHostService registered")
     }
 
     /** 加载一个外部插件包 */
@@ -299,36 +293,93 @@ class PluginManager(private val context: Context) {
             ?: error("Plugin not found: $pluginId")
         require(!entry.value.builtin) { "内置插件不可卸载: $pluginId" }
         runBlocking { unloadPlugin(entry.key).getOrThrow() }
-        writeRegistry()
+        resolveActiveUiOverride()
     }
 
+    // ── UI 覆写插件管理 ─────────────────────────────────────
+
+    private var activeUiOverrideId: PluginId? = null
+
     /**
-     * 把当前插件列表写入注册表文件（外部文件目录 plugins.json），
-     * 供主题（WebView）通过 file:// 或 Bridge 读取。
+     * 解析当前生效的 UI 覆写插件。
+     *
+     * 规则：
+     * - 0 个 → 无覆写，使用官方界面
+     * - 1 个 → 启用它
+     * - 多个 → 按安装时间取最晚的启用，其余禁用
+     * - 用户偏好（active_ui_override_plugin_id）优先，若该插件仍存在则用它
      */
-    fun writeRegistry() {
-        runCatching {
-            val json = buildString {
-                append("{\"plugins\":[")
-                getBuiltinPluginInfo().forEachIndexed { index, info ->
-                    if (index > 0) append(",")
-                    append("{")
-                    append("\"id\":\"${info.id}\",")
-                    append("\"name\":\"${info.name}\",")
-                    append("\"description\":\"${info.description}\",")
-                    append("\"version\":\"${info.version}\",")
-                    append("\"enabled\":${info.enabled},")
-                    append("\"builtin\":${info.builtin},")
-                    append("\"icon\":\"${info.icon}\",")
-                    append("\"hasConfig\":${info.hasConfig}")
-                    append("}")
+    fun resolveActiveUiOverride() {
+        val overrides = plugins.filterValues {
+            it is top.funcun.companion.sdk.UiOverridePlugin
+        }.keys.toList()
+
+        if (overrides.isEmpty()) {
+            activeUiOverrideId = null
+            savePreferredOverride(null)
+            return
+        }
+
+        // 用户偏好优先
+        val preferred = loadPreferredOverride()?.let { pref ->
+            overrides.firstOrNull { it.value == pref }
+        }
+        val chosen = preferred ?: overrides.maxByOrNull { installTimeOf(it) } ?: overrides.first()
+
+        activeUiOverrideId = chosen
+        savePreferredOverride(chosen.value)
+
+        // 启用选中的，禁用其它 UI 覆写插件
+        overrides.forEach { id ->
+            val target = if (id == chosen) PluginState.ENABLED else PluginState.DISABLED
+            if (pluginStates[id] != target) {
+                runBlocking {
+                    runCatching {
+                        if (target == PluginState.ENABLED) plugins[id]?.onEnable()
+                        else plugins[id]?.onDisable()
+                    }
                 }
-                append("]}")
+                pluginStates[id] = target
             }
-            val file = File(context.getExternalFilesDir(null), PLUGIN_REGISTRY_FILE)
-            file.writeText(json)
-            Log.i(TAG, "Plugin registry written: ${file.absolutePath}")
-        }.onFailure { Log.w(TAG, "Failed to write plugin registry", it) }
+        }
+        Log.i(TAG, "Active UI override: ${chosen.value}")
+    }
+
+    /** 当前生效的 UI 覆写插件（无则 null） */
+    fun getActiveUiOverride(): top.funcun.companion.sdk.UiOverridePlugin? {
+        val id = activeUiOverrideId ?: return null
+        return plugins[id] as? top.funcun.companion.sdk.UiOverridePlugin
+    }
+
+    /** 用户手动切换生效的 UI 覆写插件 */
+    fun setActiveUiOverride(pluginId: String) {
+        val id = plugins.keys.firstOrNull { it.value == pluginId } ?: return
+        if (plugins[id] !is top.funcun.companion.sdk.UiOverridePlugin) return
+        savePreferredOverride(pluginId)
+        resolveActiveUiOverride()
+    }
+
+    /** 是否为 UI 覆写插件 */
+    fun isUiOverride(pluginId: String): Boolean =
+        plugins.entries.firstOrNull { it.key.value == pluginId }
+            ?.value is top.funcun.companion.sdk.UiOverridePlugin
+
+    private fun installTimeOf(pluginId: PluginId): Long {
+        // 外部插件用其目录 mtime，内置插件视为最早（0）
+        val dir = File(File(context.filesDir, "plugins"), pluginId.value)
+        return if (dir.exists()) dir.lastModified() else 0L
+    }
+
+    private fun loadPreferredOverride(): String? =
+        context.getSharedPreferences(UI_PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_ACTIVE_OVERRIDE, null)
+
+    private fun savePreferredOverride(pluginId: String?) {
+        context.getSharedPreferences(UI_PREFS, Context.MODE_PRIVATE)
+            .edit().apply {
+                if (pluginId == null) remove(KEY_ACTIVE_OVERRIDE)
+                else putString(KEY_ACTIVE_OVERRIDE, pluginId)
+            }.apply()
     }
 
     /** 异步关闭所有插件 */

@@ -15,6 +15,7 @@ camerax = "1.4.1"
 coroutines = "1.9.0"
 miuix = "0.9.4-rc01"
 ksp = "2.3.11"
+materialkolor = "2.0.0"
 
 [libraries]
 # Miuix (HyperOS style)
@@ -76,6 +77,9 @@ coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref 
 # Coroutines
 coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+
+# MaterialKolor（从种子色生成 M3 配色）
+materialkolor = { group = "com.materialkolor", name = "material-kolor", version.ref = "materialkolor" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
