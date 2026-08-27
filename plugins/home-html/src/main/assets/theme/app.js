@@ -232,9 +232,13 @@ function openConfig(pluginId, container) {
   const schema = JSON.parse(Host.getConfigSchema(pluginId) || 'null');
   if (!schema) { toast('该插件无配置项'); return; }
 
-  // 插件声明了自定义配置 HTML → 提示主题需加载（后续版本支持）
+  // 插件声明了自定义配置 HTML → 用 iframe + srcdoc 注入（宿主读取内容）
   if (schema.customHtml) {
-    area.innerHTML = `<p class="muted">该插件使用自定义配置界面（${esc(schema.customHtml)}）</p>`;
+    const html = Host.getCustomConfigHtml(pluginId) || '';
+    area.innerHTML = `
+      <iframe srcdoc="${esc(html)}"
+        style="width:100%;height:520px;border:none;border-radius:12px;background:transparent;"></iframe>
+    `;
     return;
   }
 

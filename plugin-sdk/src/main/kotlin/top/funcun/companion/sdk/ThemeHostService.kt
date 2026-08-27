@@ -38,6 +38,21 @@ interface ThemeHostService {
 
     /** 应用信息 JSON：{"appName","versionName","versionCode"} */
     fun getAppInfoJson(): String
+
+    /** 当前主题信息 JSON：{"installed":true/false,"source":"user"/"builtin","dir":"..."} */
+    fun getThemeInfoJson(): String
+
+    /** 读取插件自定义配置 HTML 内容（customHtml 指定的文件），供主题注入渲染 */
+    fun getCustomConfigHtml(pluginId: String): String?
+
+    /** 打开主题导入界面（文件选择 zip）。返回 true 表示已触发导入流程 */
+    fun importTheme(): Boolean
+
+    /** 恢复为内置默认主题（删除用户自定义主题）。返回是否成功 */
+    fun resetTheme(): Boolean
+
+    /** 重新加载主题（WebView 收到 onResume 后调用） */
+    fun reloadTheme(): Boolean
 }
 
 /** 主题宿主服务 Token */

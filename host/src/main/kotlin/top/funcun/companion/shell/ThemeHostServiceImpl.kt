@@ -1,6 +1,7 @@
 package top.funcun.companion.shell
 
 import android.content.Context
+import top.funcun.companion.plugin.homehtml.HomeHtmlConstants
 import top.funcun.companion.sdk.ThemeHostService
 
 /**
@@ -104,6 +105,56 @@ class ThemeHostServiceImpl(
         }
         val appName = context.applicationInfo.loadLabel(context.packageManager).toString()
         return """{"appName":${jsonStr(appName)},"versionName":${jsonStr(versionName)},"versionCode":$versionCode}"""
+    }
+
+    override fun getThemeInfoJson(): String {
+        val dir = java.io.File(context.getExternalFilesDir(null), HomeHtmlConstants.USER_THEME_DIR)
+        val index = java.io.File(dir, "index.html")
+        val installed = index.exists()
+        return buildString {
+            append("{")
+            append(""""installed":$installed,""")
+            append(""""source":${jsonStr(if (installed) "user" else "builtin")},""")
+            append(""""dir":${jsonStr(dir.absolutePath)}""")
+            append("}")
+        }
+    }
+
+    override fun getCustomConfigHtml(pluginId: String): String? {
+        val schema = pluginManager.getConfigSchema(pluginId) ?: return null
+        val file = schema.customHtml ?: return null
+        return try {
+            context.assets.open(file).bufferedReader().use { it.readText() }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    override fun importTheme(): Boolean {
+        val intent = android.content.Intent(context, ThemeImportActivity::class.java)
+        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        return try {
+            context.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    override fun resetTheme(): Boolean {
+        val dir = java.io.File(context.getExternalFilesDir(null), HomeHtmlConstants.USER_THEME_DIR)
+        return try {
+            dir.deleteRecursively()
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    override fun reloadTheme(): Boolean {
+        // WebView 靠自身的 onResume 重新加载主题；
+        // 此处放一个广播/事件钩子供后续扩展
+        return true
     }
 
     /** 最简 JSON 字符串转义 */

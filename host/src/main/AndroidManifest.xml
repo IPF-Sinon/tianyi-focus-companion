@@ -27,6 +27,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".shell.ThemeImportActivity"
+            android:exported="false"
+            android:theme="@style/Theme.YijianZhongqin"
+            android:excludeFromRecents="true" />
+
     </application>
 
 </manifest>

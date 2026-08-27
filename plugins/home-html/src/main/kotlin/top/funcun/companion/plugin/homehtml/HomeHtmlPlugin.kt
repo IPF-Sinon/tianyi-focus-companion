@@ -49,6 +49,15 @@ class HomeHtmlPlugin : Plugin {
     override val builtin = true
     override val iconEmoji = "🌐"
 
+    /**
+     * 主题插件的配置页：自定义 HTML。
+     * 主题从 Bridge 拿到 schema 后发现 customHtml 非空，会加载该 HTML 渲染配置界面。
+     * 该页面提供「导入主题包」「恢复默认主题」功能。
+     */
+    override val configSchema = top.funcun.companion.sdk.ConfigSchema(
+        customHtml = "config.html",
+    )
+
     private lateinit var ctx: PluginContext
     private var themeHost: ThemeHostService? = null
 
@@ -73,9 +82,6 @@ class HomeHtmlPlugin : Plugin {
 
     companion object {
         private const val TAG = "HomeHtmlPlugin"
-
-        /** 用户自定义主题包目录（相对外部文件目录） */
-        const val USER_THEME_DIR = "themes/current"
     }
 }
 
@@ -84,7 +90,7 @@ class HomeHtmlPlugin : Plugin {
  * 用户主题存在则返回其目录，否则返回 null（使用内置 assets 主题）。
  */
 internal fun resolveUserThemeDir(context: Context): File? {
-    val dir = File(context.getExternalFilesDir(null), HomeHtmlPlugin.USER_THEME_DIR)
+    val dir = File(context.getExternalFilesDir(null), HomeHtmlConstants.USER_THEME_DIR)
     val index = File(dir, "index.html")
     return if (index.exists()) dir else null
 }
@@ -99,16 +105,28 @@ fun ThemeWebView(
     themeHost: ThemeHostService?,
     modifier: Modifier = Modifier,
 ) {
-    val userThemeDir = remember { resolveUserThemeDir(hostContext) }
+    var webViewRef: WebView? = null
 
-    DisposableEffect(Unit) {
-        onDispose { }
+    // 从主题导入界面返回时重载主题（重新解析用户主题目录）
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                webViewRef?.reload()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            webViewRef?.destroy()
+        }
     }
 
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { ctx ->
             WebView(ctx).apply {
+                webViewRef = this
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.allowFileAccess = true
@@ -119,15 +137,15 @@ fun ThemeWebView(
                     "TianyiHost",
                 )
 
+                val userThemeDir = resolveUserThemeDir(ctx)
                 webViewClient = if (userThemeDir != null) {
-                    // 用户主题：从外部目录读文件
                     UserThemeWebViewClient(userThemeDir)
                 } else {
                     WebViewClient()
                 }
 
                 if (userThemeDir != null) {
-                    loadUrl("https://theme.local/index.html")
+                    loadUrl(HomeHtmlConstants.USER_THEME_BASE_URL)
                 } else {
                     loadUrl("file:///android_asset/theme/index.html")
                 }
@@ -210,4 +228,17 @@ private class TianyiHostBridge(private val host: ThemeHostService?) {
 
     @JavascriptInterface
     fun getAppInfo(): String = host?.getAppInfoJson() ?: """{"appName":"依见钟勤"}"""
+
+    @JavascriptInterface
+    fun getThemeInfo(): String = host?.getThemeInfoJson() ?: """{"installed":false,"source":"builtin"}"""
+
+    @JavascriptInterface
+    fun getCustomConfigHtml(pluginId: String): String =
+        host?.getCustomConfigHtml(pluginId) ?: ""
+
+    @JavascriptInterface
+    fun importTheme(): Boolean = host?.importTheme() ?: false
+
+    @JavascriptInterface
+    fun resetTheme(): Boolean = host?.resetTheme() ?: false
 }
