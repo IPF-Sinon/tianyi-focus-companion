@@ -95,7 +95,7 @@ fun StatsScreen() {
                 }
             }
         }
-        Spacer(Modifier.height(24.dp))
+        top.funcun.companion.shell.ui.components.BottomBarSpacer()
     }
 }
 

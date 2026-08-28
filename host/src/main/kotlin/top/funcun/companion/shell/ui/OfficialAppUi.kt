@@ -1,12 +1,12 @@
 package top.funcun.companion.shell.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Extension
@@ -16,83 +16,63 @@ import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.unit.dp
 import top.funcun.companion.App
+import top.funcun.companion.shell.ui.components.BarTab
+import top.funcun.companion.shell.ui.components.FloatingBottomBar
+import top.funcun.companion.theme.ThemeManager
 
 /**
  * 官方原生界面（无 UI 覆写插件时使用）。
+ *
+ * 悬浮胶囊底栏叠在内容之上（对标 FolkPatch），内容页面自行用 BottomBarSpacer 避让。
  */
 @Composable
 fun OfficialAppUi() {
-    var tab by rememberSaveable { mutableStateOf(AppTab.HOME) }
+    var index by rememberSaveable { mutableIntStateOf(0) }
     val pluginManager = remember { App.instance.pluginManager }
+    val cfg = ThemeManager.config
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 0.dp,
-            ) {
-                AppTab.entries.forEach { t ->
-                    NavigationBarItem(
-                        selected = tab == t,
-                        onClick = { tab = t },
-                        icon = {
-                            Icon(
-                                imageVector = if (tab == t) t.filled else t.outlined,
-                                contentDescription = t.label,
-                            )
-                        },
-                        label = { Text(t.label) },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        ),
-                    )
-                }
-            }
-        },
-    ) { padding ->
+    val tabs = remember {
+        listOf(
+            BarTab("专注", Icons.Filled.Home, Icons.Outlined.Home),
+            BarTab("统计", Icons.Filled.BarChart, Icons.Outlined.BarChart),
+            BarTab("插件", Icons.Filled.Extension, Icons.Outlined.Extension),
+            BarTab("设置", Icons.Filled.Settings, Icons.Outlined.Settings),
+        )
+    }
+
+    // 返回键：非首个 Tab → 回首个 Tab
+    BackHandler(enabled = index != 0) { index = 0 }
+
+    Box(modifier = Modifier.fillMaxSize()) {
         AnimatedContent(
-            targetState = tab,
+            targetState = index,
             transitionSpec = { fadeIn() togetherWith fadeOut() },
             label = "tab",
-            modifier = Modifier.padding(padding).fillMaxSize(),
-        ) { t ->
+            modifier = Modifier.fillMaxSize(),
+        ) { i ->
             Box(Modifier.fillMaxSize()) {
-                when (t) {
-                    AppTab.HOME -> HomeScreen()
-                    AppTab.STATS -> StatsScreen()
-                    AppTab.PLUGINS -> PluginScreen(pluginManager)
-                    AppTab.SETTINGS -> SettingsScreen(pluginManager)
+                when (i) {
+                    0 -> HomeScreen()
+                    1 -> StatsScreen()
+                    2 -> PluginScreen(pluginManager)
+                    3 -> SettingsScreen(pluginManager)
                 }
             }
         }
-    }
-}
 
-enum class AppTab(
-    val label: String,
-    val filled: ImageVector,
-    val outlined: ImageVector,
-) {
-    HOME("专注", Icons.Filled.Home, Icons.Outlined.Home),
-    STATS("统计", Icons.Filled.BarChart, Icons.Outlined.BarChart),
-    PLUGINS("插件", Icons.Filled.Extension, Icons.Outlined.Extension),
-    SETTINGS("设置", Icons.Filled.Settings, Icons.Outlined.Settings),
+        FloatingBottomBar(
+            tabs = tabs,
+            selectedIndex = index,
+            onSelect = { index = it },
+            floating = cfg.navBarStyle == "floating",
+            compact = cfg.navBarCompact,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
 }

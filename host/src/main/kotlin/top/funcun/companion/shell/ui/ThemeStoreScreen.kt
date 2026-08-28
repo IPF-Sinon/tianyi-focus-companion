@@ -102,7 +102,7 @@ fun ThemeStoreScreen(onBack: () -> Unit) {
                         },
                     )
                 }
-                item { Spacer(Modifier.height(24.dp)) }
+                item { top.funcun.companion.shell.ui.components.BottomBarSpacer() }
             }
         }
     }

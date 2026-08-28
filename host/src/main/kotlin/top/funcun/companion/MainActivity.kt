@@ -8,10 +8,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import top.funcun.companion.plugin.onboarding.OnboardingPlugin
 import top.funcun.companion.plugin.onboarding.PermissionScreen
 import top.funcun.companion.shell.UIShell
-import top.funcun.companion.theme.TianyiTheme
+import top.funcun.companion.theme.TianyiThemeWithBackground
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -22,9 +23,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            TianyiTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    // 权限引导门禁：首次启动先授予权限，完成后才加载主题主界面
+            TianyiThemeWithBackground {
+                // 透明 Surface：让全局背景层透出来
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = Color.Transparent,
+                ) {
+                    // 权限引导门禁：首次启动先授予权限，完成后才加载主界面
                     var showOnboarding by remember {
                         mutableStateOf(!OnboardingPlugin.isOnboardingComplete(this@MainActivity))
                     }

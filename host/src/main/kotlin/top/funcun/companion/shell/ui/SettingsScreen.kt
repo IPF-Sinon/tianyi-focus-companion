@@ -82,7 +82,7 @@ private fun SettingsMain(onTheme: () -> Unit, onStore: () -> Unit) {
         item { SettingsGroupCard {
             SettingsItem("ℹ️", "关于", "依见钟勤 · 主题系统兼容 FolkPatch") {}
         } }
-        item { Spacer(Modifier.height(24.dp)) }
+        item { top.funcun.companion.shell.ui.components.BottomBarSpacer() }
     }
 }
 

@@ -42,6 +42,10 @@ data class ThemeConfig(
     // 布局
     val homeLayoutStyle: String = "dashboard",       // dashboard / simple
     val cardCornerRadius: Int = 24,
+
+    // 底栏
+    val navBarStyle: String = "floating",             // floating（悬浮胶囊）/ standard（常规通栏）
+    val navBarCompact: Boolean = true,                // true 胶囊 / false 大圆角
 ) {
     companion object {
         /** theme.json 里资源文件名约定（与 FolkPatch 对齐） */

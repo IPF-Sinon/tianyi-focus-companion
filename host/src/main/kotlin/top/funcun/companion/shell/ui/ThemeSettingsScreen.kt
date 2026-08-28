@@ -147,6 +147,21 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
             )
         }
 
+        // 底栏样式
+        SectionTitle("底栏样式")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = cfg.navBarStyle == "floating",
+                onClick = { ThemeManager.update(context) { it.copy(navBarStyle = "floating") } },
+                label = { Text("悬浮胶囊") },
+            )
+            FilterChip(
+                selected = cfg.navBarStyle == "standard",
+                onClick = { ThemeManager.update(context) { it.copy(navBarStyle = "standard") } },
+                label = { Text("常规通栏") },
+            )
+        }
+
         // 圆角
         SectionTitle("卡片圆角（${cfg.cardCornerRadius}dp）")
         Slider(
@@ -182,7 +197,7 @@ fun ThemeSettingsScreen(onBack: () -> Unit) {
             Text("恢复默认主题", color = MaterialTheme.colorScheme.error)
         }
 
-        Spacer(Modifier.height(24.dp))
+        top.funcun.companion.shell.ui.components.BottomBarSpacer()
     }
 }
 
